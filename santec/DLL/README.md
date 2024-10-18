@@ -4,7 +4,7 @@
 Santec DLLs serve the fundamental base to establish instrument connections and perform IL operations.
 
 ## Contents
-- **InstrumentDLL.dll**
+- **Santec.Instrument.dll**
   - **Version**: 2.9.0
   - **Description**: Establish instrument connections. <br><br>
   
