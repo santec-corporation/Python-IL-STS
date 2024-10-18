@@ -122,7 +122,7 @@ ROOT = str(os.path.dirname(__file__)) + '\\DLL\\'
 logger.info("Getting DLL path, root: %s", ROOT)
 # print(ROOT)    # Uncomment in to check if the root was selected properly
 
-DLL1 = 'InstrumentDLL'
+DLL1 = 'Santec.Instrument'
 DLL2 = 'STSProcess'
 result1 = clr.AddReference(ROOT + DLL1)  # Add the Instrument DLL to the root
 result2 = clr.AddReference(ROOT + DLL2)  # Add the STSProcess DLL to the root
