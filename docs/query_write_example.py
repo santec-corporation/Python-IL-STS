@@ -33,21 +33,21 @@ def main():
 
     # TSL Query / Write example
     # Write to TSL
-    status = tsl.write_tsl('POW 5')       # Sets TSL output power to 5
+    status = tsl.write('POW 5')       # Sets TSL output power to 5
     print(status)               # Prints 0 if write was successful
 
     # Query TSL
-    status, response = tsl.query_tsl('POW?')        # Gets TSL output power
+    status, response = tsl.query('POW?')        # Gets TSL output power
     print(status)             # Prints status 0 if a query was successful
     print(response)           # Prints query response
 
     # MPM Query / Write example
     # Write to MPM
-    status = mpm.write_mpm('AVG 5')    # Sets MPM averaging time to 5
+    status = mpm.write('AVG 5')    # Sets MPM averaging time to 5
     print(status)  # Prints 0 if write was successful
 
     # Query MPM
-    status, response = mpm.query_mpm('AVG?')  # Gets MPM averaging time
+    status, response = mpm.query('AVG?')  # Gets MPM averaging time
     print(status)  # Prints status 0 if a query was successful
     print(response)  # Prints query response
 

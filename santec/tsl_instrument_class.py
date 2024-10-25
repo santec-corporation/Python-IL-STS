@@ -237,7 +237,7 @@ class TslInstrument(TslData):
         logger.info("Laser diode status set to: %s", state)
         return errorcode
 
-    def query_tsl(self, command: str) -> tuple[int, str]:
+    def query(self, command: str) -> tuple[int, str]:
         """
         Queries the TSL instrument with a command,
         and returns the read data from the instrument buffer.
@@ -262,7 +262,7 @@ class TslInstrument(TslData):
             logger.error(f"Failed to query TSL with command '{command}': {e}")
             raise RuntimeError(f"query_tsl failed: {e}")
 
-    def write_tsl(self, command: str) -> int:
+    def write(self, command: str) -> int:
         """
         Writes a command to the TSL instrument.
 
@@ -284,7 +284,7 @@ class TslInstrument(TslData):
             logger.error(f"Failed to write to TSL with command '{command}': {e}")
             raise RuntimeError(f"write_tsl failed: {e}")
 
-    def read_tsl(self) -> tuple[int, str]:
+    def read(self) -> tuple[int, str]:
         """
         Reads data from the TSL instrument buffer.
 

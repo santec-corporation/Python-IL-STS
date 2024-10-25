@@ -134,7 +134,7 @@ class MpmInstrument(MpmData):
 
         logger.info("Connected to Mpm instrument.")
 
-    def query_mpm(self, command: str) -> tuple[int, str]:
+    def query(self, command: str) -> tuple[int, str]:
         """
         Queries the MPM instrument with a command,
         and returns the read data from the instrument buffer.
@@ -159,7 +159,7 @@ class MpmInstrument(MpmData):
             logger.error(f"Failed to query MPM with command '{command}': {e}")
             raise RuntimeError(f"query_mpm failed: {e}")
 
-    def write_mpm(self, command: str) -> int:
+    def write(self, command: str) -> int:
         """
         Writes a command to the MPM instrument.
 
@@ -181,7 +181,7 @@ class MpmInstrument(MpmData):
             logger.error(f"Failed to write to MPM with command '{command}': {e}")
             raise RuntimeError(f"write_mpm failed: {e}")
 
-    def read_mpm(self) -> tuple[int, str]:
+    def read(self) -> tuple[int, str]:
         """
         Reads data from the MPM instrument buffer.
 
