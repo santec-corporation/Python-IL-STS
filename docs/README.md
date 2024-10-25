@@ -19,6 +19,40 @@
 
 ---
 
+## LAN Configuration
+
+#### 1. Go to the `main.py` file.
+
+#### 2. Replace the code below in the `connection()` function,
+```python
+def connection():
+    tsl: TslInstrument
+    mpm: MpmInstrument
+    daq: SpuDevice
+
+    device_address = GetAddress()
+    device_address.initialize_instrument_addresses(tsl_mpm=False)
+    # tsl_instrument = device_address.get_tsl_address()
+    # mpm_instrument = device_address.get_mpm_address()
+    dev_address = device_address.get_dev_address()
+
+    tsl = TslInstrument(interface="LAN", ip_address="192.168.1.161")
+    tsl.connect()
+
+    mpm = MpmInstrument(interface="LAN", ip_address="192.168.1.162")
+    mpm.connect()
+
+    daq = SpuDevice(device_name=dev_address)
+    dev.connect()
+
+    return tsl, mpm, daq
+```
+
+#### 3. Follow the steps from here, [Initialize the System](https://github.com/santec-corporation/Santec_IL_STS/blob/main/docs/README.md#1-initialize-the-system).
+
+
+---
+
 ## How to Run the Script
 
 Verify the instrument connections before running the script, <br>
