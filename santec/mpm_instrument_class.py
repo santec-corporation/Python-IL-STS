@@ -67,7 +67,7 @@ class MpmInstrument(MpmData):
         Exception: If the provided interface is not GPIB or LAN.
     """
     def __init__(self,
-                 interface: str,
+                 interface: str = "GPIB",
                  ip_address: str = "",
                  port: int = 5000,
                  instrument: Instrument = None,

@@ -80,7 +80,7 @@ class TslInstrument(TslData):
     """
 
     def __init__(self,
-                 interface: str,
+                 interface: str = "GPIB",
                  ip_address: str = "",
                  port: int = 5000,
                  instrument: Instrument = None,
