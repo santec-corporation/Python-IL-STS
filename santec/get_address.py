@@ -50,28 +50,37 @@ class GetAddress:
         self.__cached_daq_address: str = ""
         self.is_disposed: bool = False
 
-    def initialize_instrument_addresses(self, mode: str = "SME") -> None:
+    def initialize_instrument_addresses(self, mode: str = "SME", tsl_mpm: bool = True, daq: bool = True) -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
 
         Parameters:
-            mode (str): Current STS operation mode.
-            Default value: "SME".
+            mode (str): The current STS operation mode.
+                    Default value: "SME".
+
+            tsl_mpm: True if initializing TSL and MPM connections via GPIB / USB,
+                    else False if using LAN.
+                    Default value: True.
+
+            daq: If using the MPM DAQ functionality.
+                Default value: True.
 
         Raises:
             RuntimeError: If no TSL or MPM instruments are found.
         """
+        instruments = []
         logger.info("Initializing Instrument Addresses")
-        instruments = self.detect_instruments()
+        if tsl_mpm:
+            instruments = self.detect_instruments()
 
-        if not instruments:
-            logger.critical("No TSL or MPM instruments were found.")
-            raise RuntimeError("No TSL or MPM instruments were found.")
+            if not instruments:
+                logger.critical("No TSL or MPM instruments were found.")
+                raise RuntimeError("No TSL or MPM instruments were found.")
 
-        self.select_instruments(instruments)
+            self.select_instruments(instruments)
 
-        if mode == 'SME':
+        if mode == 'SME' and daq:
             self.select_daq_device(instruments)
 
     def detect_instruments(self) -> list:

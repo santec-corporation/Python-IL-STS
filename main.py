@@ -154,6 +154,29 @@ def display_graph(wavelength: list, il_data: list):
         print(f"Error while displaying graph, {e}")
 
 
+def connection():
+    tsl: TslInstrument
+    mpm: MpmInstrument
+    daq: SpuDevice
+
+    device_address = GetAddress()
+    device_address.initialize_instrument_addresses()
+    tsl_instrument = device_address.get_tsl_address()
+    mpm_instrument = device_address.get_mpm_address()
+    dev_address = device_address.get_dev_address()
+
+    tsl = TslInstrument(instrument=tsl_instrument)
+    tsl.connect()
+
+    mpm = MpmInstrument(instrument=mpm_instrument)
+    mpm.connect()
+
+    daq = SpuDevice(device_name=dev_address)
+    dev.connect()
+
+    return tsl, mpm, daq
+
+
 def main() -> None:
     """
     Main method of the project.
@@ -162,30 +185,8 @@ def main() -> None:
     Returns:
         None
     """
-    mpm = None
-    dev = None
-
-    device_address = GetAddress()
-    device_address.initialize_instrument_addresses()
-    tsl_instrument = device_address.get_tsl_address()
-    mpm_instrument = device_address.get_mpm_address()
-    dev_address = device_address.get_dev_address()
-
-    # Connect to the devices
-    if tsl_instrument is not None:
-        tsl = TslInstrument(instrument=tsl_instrument)
-        tsl.connect()
-    else:
-        raise Exception("There must be a TSL connected")
-
-    if mpm_instrument is not None:
-        mpm = MpmInstrument(instrument=mpm_instrument)
-        mpm.connect()
-
-    if dev_address is not None:
-        dev = SpuDevice(device_name=dev_address)
-        dev.connect()
-
+    tsl, mpm, daq = connection()
+    
     # Set the TSL properties
     previous_param_data = prompt_and_get_previous_param_data(
         file_saving.FILE_LAST_SCAN_PARAMS)
@@ -193,7 +194,7 @@ def main() -> None:
 
     # If there is an MPM, create an instance of ILSTS
     if mpm is not None:
-        ilsts = StsProcess(tsl, mpm, dev)
+        ilsts = StsProcess(tsl, mpm, daq)
         ilsts.set_selected_channels(previous_param_data)
         ilsts.set_selected_ranges(previous_param_data)
 
