@@ -172,7 +172,7 @@ def connection():
     mpm.connect()
 
     daq = SpuDevice(device_name=dev_address)
-    dev.connect()
+    daq.connect()
 
     return tsl, mpm, daq
 
