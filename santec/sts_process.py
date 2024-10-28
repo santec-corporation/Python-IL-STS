@@ -264,14 +264,11 @@ class StsProcess(STSData):
 
         else:
             self.selected_ranges = []
-            print("\nSelect a dynamic range. ex: 1 or 3 or 5")
-            print("Available dynamic ranges:")
-            i = 1
+            print("\nAvailable dynamic ranges:")
             self._mpm.get_range()
-            for mpm_range in self._mpm.range_data:
-                print('{}- {}'.format(i, mpm_range))
-                i += 1
-            selection = input()
+            for i in range(len(self._mpm.range_data)):
+                print('{}. {}'.format(i + 1, self._mpm.dynamic_ranges[i]))
+            selection = input("Select a dynamic range (Ex: 1,2,3): ")
             logger.info("User selected range(s): %s", selection)
             self.selected_ranges = re.findall(r"[\w']+", selection)
 

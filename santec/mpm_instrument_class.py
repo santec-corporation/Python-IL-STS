@@ -33,6 +33,13 @@ class MpmData:
     averaging_time: float = 0.0
     range_data: list = []
     modules_and_channels: list = []
+    dynamic_ranges = [
+            '-30 ~ +10dBm',
+            '-40 ~ 0dBm',
+            '-50 ~ -10dBm',
+            '-60 ~ -20dBm',
+            '-80 ~ -30dBm'
+        ]
 
 
 class MpmInstrument(MpmData):
