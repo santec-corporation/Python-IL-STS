@@ -197,12 +197,9 @@ class StsProcess(STSData):
                        '3': self.set_odd_channels,
                        '4': self.set_special_channels}
 
-        user_selection = input("""\nSelect channels to be measured:
-                                    1. All channels
-                                    2. Even channels
-                                    3. Odd channels
-                                    4. Specific channels
-                                """)
+        print("""\nChannels measurement options:\n  1. All channels\n"""
+              """  2. Even channels\n  3. Odd channels\n  4. Specific channels""")
+        user_selection = input("Select channels to be measured: ")
         mpm_choices[user_selection]()
         logger.info("STS channel selection done.")
 
