@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Pre-Release'
+        required: false
+        type: boolean
+
+env:
+  is_prerelease: ${{ inputs.prerelease }}
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install requirements
+        run: |
+          pip install -r docs/requirements.txt
+
+      - name: Extract version and organization
+        id: extract_info
+        run: |
+          $content = Get-Content -Path santec/__init__.py -Raw
+          $date = [regex]::Match($content, '__date__ = "(.*?)"').Groups[1].Value
+          $version = [regex]::Match($content, '__version__ = "(.*?)"').Groups[1].Value
+          $organization = [regex]::Match($content, '__organization__ = "(.*?)"').Groups[1].Value
+          echo "date=$date" >> $env:GITHUB_ENV
+          echo "version=$version" >> $env:GITHUB_ENV
+          echo "organization=$organization" >> $env:GITHUB_ENV
+
+      - name: Create Python_IL_STS directory
+        run: |
+          # Create Python_IL_STS directory if it doesn't exist
+          New-Item -ItemType Directory -Force -Path Python_IL_STS
+          
+          # Move files into the Python_IL_STS directory
+          Move-Item -Path main.py, santec, docs, README.md -Destination Python_IL_STS -ErrorAction Stop
+          
+          # Zip the Python_IL_STS directory
+          $zipFileName = "Python_IL_STS.zip"
+          Compress-Archive -Path Python_IL_STS\* -DestinationPath $zipFileName -Force
+
+      - name: Set Tag Name and Release Name
+        id: set_tag_info
+        run: |
+          $version = $env:version
+          $tag = "v$version"
+          $release_name = "Release $version"
+          echo "tag_name=$tag" >> $env:GITHUB_ENV
+          echo "release_name=$release_name" >> $env:GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag_name }}
+          name: ${{ env.release_name }}
+          draft: false
+          prerelease: ${{ env.is_prerelease }}
+          files: |
+            Python_IL_STS.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Release Type
+        run: |
+          $message = "A $($env:GITHUB_EVENT_INPUTS_RELEASE) has been created."
+          Write-Host $message

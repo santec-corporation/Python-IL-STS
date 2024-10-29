@@ -16,13 +16,13 @@ import platform
 import clr
 
 # About
-__version__ = "2.7.106"
+__version__ = "2.7.107"
 __author__ = "Chentir MT"
 __project_name__ = "Santec_IL_STS"
 __organization__ = "Santec Holdings Corporation"
 __description__ = "Program to measure the Insertion Loss using the Swept Test System"
 __url__ = "https://github.com/santec-corporation/Santec_IL_STS"
-__date__ = "2024-10-28"
+__date__ = "2024-10-29"
 __license__ = "GNU General Public License v3.0"
 __copyright__ = f"Copyright 2021-{datetime.date.today().year}, {__organization__}"
 
