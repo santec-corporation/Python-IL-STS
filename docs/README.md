@@ -15,7 +15,7 @@
 - [daq_device_class.py]: Interacts with DAQ devices.
 - [sts_process.py]: Processes data from the Swept Test System.
 - [error_handling_class.py]: Manages errors related to Instrument DLL and STS Process DLL.
-- [file_logging.py]: Records operational data for the Swept Test System.
+- [file_saving.py]: Records operational data for the Swept Test System.
 
 ---
 
@@ -174,4 +174,4 @@ Set the power parameter based on your equipment's requirements and desired sensi
 [daq_device_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/daq_device_class.py>
 [sts_process.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/sts_process.py>
 [error_handling_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/error_handling_class.py>
-[file_logging.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/file_logging.py>
+[file_saving.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/file_saving.py>
