@@ -42,7 +42,7 @@ This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL 
 - Santec DLLs: _Instrument DLL_, _STSProcess DLL_ and _FTD2XX_NET DLL_.
   <br>
   Refer to the DLL documentation here:
-  [About DLLs](https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/DLL/README.md)
+  [About DLLs](https://github.com/santec-corporation/Python-IL-STS/blob/stable/src/santec/DLL/README.md)
 
 ### Supported Instruments
 The Swept Test System IL PDL Software is designed to function with:
