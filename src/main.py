@@ -8,6 +8,7 @@ Santec IL STS
 import os
 import json
 import time
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
@@ -185,59 +186,119 @@ def main() -> None:
     Returns:
         None
     """
+
+    def wavelength_dependent_loss():
+        # Set the TSL properties
+        previous_param_data = prompt_and_get_previous_param_data(
+            file_saving.FILE_LAST_SCAN_PARAMS)
+        setting_tsl_sweep_params(tsl, previous_param_data)
+
+        # If there is an MPM, create an instance of ILSTS
+        if mpm is not None:
+            ilsts = StsProcess(tsl, mpm, daq)
+            ilsts.set_selected_channels(previous_param_data)
+            ilsts.set_selected_ranges(previous_param_data)
+
+            ilsts.set_sts_data_struct()
+            ilsts.set_parameters()
+
+            previous_ref_data_array = None
+            if previous_param_data is not None:
+                previous_ref_data_array = prompt_and_get_previous_reference_data()
+            if previous_ref_data_array is not None:
+                ilsts.reference_data_array = previous_ref_data_array
+
+            if len(ilsts.reference_data_array) == 0:
+                print("\nConnect for Reference measurement and press ENTER")
+                print("Reference process:")
+                ilsts.sts_reference()
+            else:
+                print("Loading reference data...")
+                ilsts.sts_reference_from_saved_file()
+
+            # Perform the sweeps
+            ans = "y"
+            while ans in "yY":
+                print("\nDUT measurement")
+                reps = ""
+                while not reps.isnumeric():
+                    reps = input("Input repeat count, and connect the DUT and press ENTER: ")
+                    if not reps.isnumeric():
+                        print("Invalid repeat count, enter a number.\n")
+
+                for _ in range(int(reps)):
+                    print("\nScan {} of {}...".format(str(_ + 1), reps))
+                    ilsts.sts_measurement()
+                    user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
+                    if user_map_display == "y":
+                        display_graph(ilsts.wavelength_table, ilsts.il)
+                    time.sleep(1)
+
+                # Get and store DUT scan data
+                ilsts.get_dut_data()
+
+                ans = input("\nRedo Scan ? (y/n): ")
+            save_all_data(tsl, previous_param_data, ilsts)
+
+    def power_scanning():
+        # MPM setting
+        mpm_mod, mpm_chan = input('Select Powermeter Module and Channel (ex: mod,chan): ').split(',')
+        mpm.write('Auto')  # Set automatic gain for the powermeter
+        avg_time = float(input('Set Averaging time for the powermeter (0.01~10000.00) [msec]: '))
+        mpm.write(f'avg {avg_time}')
+
+        # TSL setting
+        set_wl = float(input('Set characterization wavelength [nm]: '))
+
+        tsl.set_wavelength(set_wl)
+
+        start_pow = float(input('Input start power [dBm]: '))
+        tsl.write(f'Pow {start_pow}')
+
+        stop_pow = float(input('Input stop power [dBm]: '))
+        step_pow = float(input('Input power step [dB]: '))
+
+        if start_pow > stop_pow:
+            step_pow = -step_pow
+
+        # dwell_time = float(input('Set dwelling time [sec]: ')) #comment out this line if
+        dwell_time = 10 * avg_time / 1000  # The dwelling time is set 10 times longer than the averaging time of the powermeter
+
+        power_reading = []
+        power_array = []
+        actual_pow = start_pow
+        while actual_pow != stop_pow + step_pow:
+            print(actual_pow)
+            power_array.append(actual_pow)
+            raw_pow = mpm.query(f'READ? {mpm_mod}')[1].split(',')
+            power_reading.append(
+                float(raw_pow[int(mpm_chan) - 1]))  # Channels are from 1 to 4 and arrays are from 0 to3, thus "-1"
+            time.sleep(dwell_time)
+            actual_pow = round(actual_pow + step_pow, 2)
+            tsl.write(f'POW {actual_pow}')
+
+        plt.plot(power_array, power_reading)
+        max_y_axis = max(power_reading)
+        min_y_axis = min(power_reading)
+        step_y_axis = (max_y_axis - min_y_axis) / 10
+        plt.yticks(np.arange(min_y_axis, max_y_axis, step_y_axis))
+        plt.show()
+
     tsl, mpm, daq = connection()
-    
-    # Set the TSL properties
-    previous_param_data = prompt_and_get_previous_param_data(
-        file_saving.FILE_LAST_SCAN_PARAMS)
-    setting_tsl_sweep_params(tsl, previous_param_data)
 
-    # If there is an MPM, create an instance of ILSTS
-    if mpm is not None:
-        ilsts = StsProcess(tsl, mpm, daq)
-        ilsts.set_selected_channels(previous_param_data)
-        ilsts.set_selected_ranges(previous_param_data)
-
-        ilsts.set_sts_data_struct()
-        ilsts.set_parameters()
-
-        previous_ref_data_array = None
-        if previous_param_data is not None:
-            previous_ref_data_array = prompt_and_get_previous_reference_data()
-        if previous_ref_data_array is not None:
-            ilsts.reference_data_array = previous_ref_data_array
-
-        if len(ilsts.reference_data_array) == 0:
-            print("\nConnect for Reference measurement and press ENTER")
-            print("Reference process:")
-            ilsts.sts_reference()
+    break_script = 'Y'
+    while break_script in 'Yy':
+        choice = ''
+        while choice not in ['1', '2']:
+            choice = input('''Select measurement type:
+                                    1- Wavelength Dependent Loss (wavelength sweep)
+                                    2- Power scan\n''')
+        if choice == '1':
+            wavelength_dependent_loss()
+            break_script = input('Do you want to continue? (Y/N): ')
         else:
-            print("Loading reference data...")
-            ilsts.sts_reference_from_saved_file()
-
-        # Perform the sweeps
-        ans = "y"
-        while ans in "yY":
-            print("\nDUT measurement")
-            reps = ""
-            while not reps.isnumeric():
-                reps = input("Input repeat count, and connect the DUT and press ENTER: ")
-                if not reps.isnumeric():
-                    print("Invalid repeat count, enter a number.\n")
-
-            for _ in range(int(reps)):
-                print("\nScan {} of {}...".format(str(_ + 1), reps))
-                ilsts.sts_measurement()
-                user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
-                if user_map_display == "y":
-                    display_graph(ilsts.wavelength_table, ilsts.il)
-                time.sleep(1)
-
-            # Get and store DUT scan data
-            ilsts.get_dut_data()
-
-            ans = input("\nRedo Scan ? (y/n): ")
-        save_all_data(tsl, previous_param_data, ilsts)
+            power_scanning()
+            break_script = input('Do you want to continue? (Y/N): ')
 
 
 if __name__ == "__main__":
