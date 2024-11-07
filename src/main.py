@@ -299,7 +299,7 @@ def power_sweep(tsl, mpm):
     power_reading, power_array = [], []
     actual_pow = start_pow
     while actual_pow != stop_pow + step_pow:
-        print(actual_pow)
+        # print(actual_pow)
         power_array.append(actual_pow)
 
         # Read power from the MPM
