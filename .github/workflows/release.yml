@@ -3,6 +3,10 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Release Version'
+        required: false
+        type: string
       prerelease:
         description: 'Pre-Release'
         required: false
@@ -10,6 +14,7 @@ on:
 
 env:
   is_prerelease: ${{ inputs.prerelease }}
+  release_version: ${{ inputs.version }}
 
 defaults:
   run:
@@ -64,8 +69,14 @@ jobs:
         id: set_tag_info
         run: |
           $version = $env:version
-          $tag = "v$version"
-          $release_name = "Release $version"
+          $release_version = $env:release_version
+          if ($release_version) {
+            $tag = "v$release_version"
+            $release_name = "Release $release_version"
+          } else {
+            $tag = "v$version"
+            $release_name = "Release $version"
+          }
           echo "tag_name=$tag" >> $env:GITHUB_ENV
           echo "release_name=$release_name" >> $env:GITHUB_ENV
 
