@@ -132,7 +132,7 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 
 
 # Import santec modules
-from santec import file_saving
+from . import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
 from .daq_device_class import SpuDevice
