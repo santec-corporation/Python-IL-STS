@@ -45,17 +45,20 @@ class GetAddress:
     _system = nidaqmx.system.System.local()     # Getting a list of all detected DAQ devices
 
     def __init__(self):
+        self.configuration: str = ""
         self.__cached_tsl_address = None
         self.__cached_mpm_address = None
         self.__cached_daq_address: str = ""
         self.is_disposed: bool = False
 
-    def initialize_instrument_addresses(self, mode: str = "SME", tsl_mpm: bool = True, daq: bool = True) -> None:
+    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB", mode: str = "SME", tsl_mpm: bool = True, daq: bool = True) -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
 
         Parameters:
+            connection_configuration (str):
+            The connection configuration or communication mode of the instruments.
             mode (str): The current STS operation mode.
                     Default value: "SME".
 
@@ -71,6 +74,10 @@ class GetAddress:
         """
         instruments = []
         logger.info("Initializing Instrument Addresses")
+        if connection_configuration.lower() not in ['gpib', 'usb']:
+            logger.critical(f"Invalid connection configuration {connection_configuration}.")
+            raise RuntimeError(f"Invalid connection configuration {connection_configuration}.")
+        self.configuration = connection_configuration
         if tsl_mpm:
             instruments = self.detect_instruments()
 
@@ -92,7 +99,8 @@ class GetAddress:
         """
         instruments = []
         self.detect_gpib_resources(instruments)
-        self.detect_usb_resources(instruments)
+        if 'usb' in self.configuration:
+            self.detect_usb_resources(instruments)
 
         logger.info(f"Current instruments: {instruments}")
         if len(instruments) < 2:
