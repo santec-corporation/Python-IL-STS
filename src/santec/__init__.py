@@ -67,10 +67,11 @@ def setup_logging(level=logging.DEBUG, file_write_mode='w', enable_logging=True)
     return setup_logger
 
 
-parser = argparse.ArgumentParser(description='Configure logging.')
-parser.add_argument('--enable_logging', type=bool, default=False, help='Enable logging')
-args = parser.parse_args()
-logger = setup_logging(enable_logging=args.enable_logging)
+# parser = argparse.ArgumentParser(description='Configure logging.')
+# parser.add_argument('--enable_logging', type=bool, default=False, help='Enable logging')
+# args = parser.parse_args()
+# logger = setup_logging(enable_logging=args.enable_logging)
+logger = setup_logging()
 
 
 def log_run_info():
@@ -132,7 +133,7 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 
 
 # Import santec modules
-from santec import file_saving
+from . import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
 from .daq_device_class import SpuDevice
