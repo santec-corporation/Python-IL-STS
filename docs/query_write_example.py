@@ -8,7 +8,7 @@ Created on Wed 05 17:17:26 2024
 """
 
 # Importing high-level santec package and its modules
-from santec import TslInstrument, MpmInstrument, GetAddress
+from src.santec import TslInstrument, MpmInstrument, GetAddress
 
 # Initializing get instrument address class
 device_address = GetAddress()
