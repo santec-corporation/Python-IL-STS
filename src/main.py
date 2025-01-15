@@ -236,12 +236,12 @@ def main() -> None:
         ans = "y"
         while ans in "yY":
             print("\nDUT measurement")
-            reps = ""
-            while not reps.isnumeric():
-                reps = input("Input repeat count, and connect the DUT and press ENTER: ")
-                if not reps.isnumeric():
-                    print("Invalid repeat count, enter a number.\n")
-
+            while True:
+                reps = input("Input DUT scan repeat count (greater than 0): ")
+                if reps.isnumeric() and int(reps) > 0:
+                    break
+                print("Invalid repeat count, enter a positive number.\n")
+            input("Connect the DUT and press ENTER")
             for _ in range(int(reps)):
                 print("\nScan {} of {}...".format(str(_ + 1), reps))
                 ilsts.sts_measurement()
