@@ -38,7 +38,7 @@ class STSData:
     dut_data = []
     dut_monitor = []
     selected_ranges = []
-    all_channels = []
+    all_channels = {}
     selected_chans = []
     reference_data_array = []
     dut_data_array = []
@@ -187,10 +187,10 @@ class StsProcess(STSData):
         print("\nAvailable modules/channels:")
         logger.info(f"Available modules/channels: {self.all_channels}")
 
-        for i in range(len(self.all_channels)):
-            if len(self.all_channels[i]) == 0:
+        for i, module in enumerate(self.all_channels):
+            if not self.all_channels[module]:
                 continue
-            print("\r" + "Module {}: Channels {}".format(i, self.all_channels[i]))
+            print("\r" + "Module {}: {} - Channels: {}".format(i + 1, module, self.all_channels[module]))
 
         mpm_choices = {'1': self.set_all_channels,
                        '2': self.set_even_channels,
@@ -201,28 +201,29 @@ class StsProcess(STSData):
               """  2. Even channels\n  3. Odd channels\n  4. Specific channels""")
         user_selection = input("Select channels to be measured: ")
         mpm_choices[user_selection]()
+        logger.info(f"Selected channels: {self.selected_chans}")
         logger.info("STS channel selection done.")
 
     def set_all_channels(self):
         """ Selects all modules and all channels that are connected to MPM. """
         logger.info("Selecting all channels for operation")
-        for i in range(len(self.all_channels)):
-            for j in self.all_channels[i]:
+        for i, module in enumerate(self.all_channels):
+            for j in self.all_channels[module]:
                 self.selected_chans.append([i, j])
 
     def set_even_channels(self) -> None:
         """ Selects only even channels on the MPM. """
         logger.info("Selecting even channels for operation")
-        for i in range(len(self.all_channels)):
-            for j in self.all_channels[i]:
+        for i, module in enumerate(self.all_channels):
+            for j in self.all_channels[module]:
                 if j % 2 == 0:
                     self.selected_chans.append([i, j])
 
     def set_odd_channels(self) -> None:
         """ Selects only odd channels on the MPM. """
         logger.info("Selecting odd channels for operation")
-        for i in range(len(self.all_channels)):
-            for j in self.all_channels[i]:
+        for i, module in enumerate(self.all_channels):
+            for j in self.all_channels[module]:
                 if j % 2 != 0:
                     self.selected_chans.append([i, j])
 
@@ -238,6 +239,17 @@ class StsProcess(STSData):
             self.selected_chans.append([selection[i], selection[i + 1]])
             i += 2
         logger.info("Special channels set.")
+
+    def mpm_215_selection_check(self) -> bool:
+        modules_channels_info = list(self.all_channels.keys())
+        selected_channels = self.selected_chans
+        use_mpm_215_flag = False
+
+        for selection in selected_channels:
+            module_no = int(selection[0])
+            if modules_channels_info[module_no] == 'MPM-215':
+                use_mpm_215_flag = True
+        return use_mpm_215_flag
 
     def set_selected_ranges(self, previous_param_data: dict) -> None:
         """
@@ -255,7 +267,7 @@ class StsProcess(STSData):
             self.selected_ranges = previous_param_data["selected_ranges"]  # an array, like [1,3,5]
             str_all_ranges = ""
             str_all_ranges += ",".join(
-                [str(elem) for elem in self.selected_ranges])  # contains numbers so do a conversion
+                [str(elem) for elem in self.selected_ranges])  # contains numbers so does a conversion
             logger.info("Using the loaded dynamic ranges: " + str_all_ranges)
             print("Using the loaded dynamic ranges: " + str_all_ranges)
 

@@ -177,6 +177,19 @@ def connection():
     return tsl, mpm, daq
 
 
+def tsl_power_check(tsl: TslInstrument):
+    current_set_power = tsl.power
+    power = 0.00
+    if current_set_power > 5.00:
+        print("\nPower value should not be greater than 5 dBm.")
+        power = float(input("Please input Output Power (dBm) again: "))
+        while power > 5.00:
+            print("\nInvalid value of Output Power ( <=5 dBm )")
+            power = float(input("Please input Output Power (dBm): "))
+
+    tsl.set_power(power)
+
+
 def main() -> None:
     """
     Main method of the project.
@@ -186,7 +199,7 @@ def main() -> None:
         None
     """
     tsl, mpm, daq = connection()
-    
+
     # Set the TSL properties
     previous_param_data = prompt_and_get_previous_param_data(
         file_saving.FILE_LAST_SCAN_PARAMS)
@@ -196,7 +209,11 @@ def main() -> None:
     if mpm is not None:
         ilsts = StsProcess(tsl, mpm, daq)
         ilsts.set_selected_channels(previous_param_data)
-        ilsts.set_selected_ranges(previous_param_data)
+        if ilsts.mpm_215_selection_check():
+            tsl_power_check(tsl)
+            ilsts.selected_ranges = [2]
+        else:
+            ilsts.set_selected_ranges(previous_param_data)
 
         ilsts.set_sts_data_struct()
         ilsts.set_parameters()
