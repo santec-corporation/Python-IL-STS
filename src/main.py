@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 from santec import (TslInstrument, MpmInstrument, SpuDevice,
                     GetAddress, file_saving, StsProcess, log_to_screen)
 
+DWELL_TIME_CONSTANT = 10
+MILLISECONDS_TO_SECONDS_CONSTANT = 1000
+
 
 def setting_tsl_sweep_params(connected_tsl: TslInstrument, previous_param_data: dict) -> None:
     """
@@ -293,8 +296,8 @@ def power_sweep(tsl, mpm):
     if start_pow > stop_pow:
         step_pow = -step_pow
 
-    # dwell_time = float(input('Set dwelling time [sec]: ')) # comment out this line if
-    dwell_time = 10 * avg_time / 1000  # The dwelling time is set 10 times longer than the averaging time of the powermeter
+    # The dwelling time is set 10 times longer than the averaging time of the powermeter
+    dwell_time = DWELL_TIME_CONSTANT * avg_time / MILLISECONDS_TO_SECONDS_CONSTANT
 
     power_reading, power_array = [], []
     actual_pow = start_pow
@@ -305,7 +308,7 @@ def power_sweep(tsl, mpm):
         # Read power from the MPM
         raw_pow = mpm.query(f'READ? {mpm_mod}')[1].split(',')
         power_reading.append(
-            float(raw_pow[int(mpm_chan) - 1]))  # Channels are from 1 to 4 and arrays are from 0 to3, thus "-1"
+            float(raw_pow[int(mpm_chan) - 1]))  # Channels are from 1 to 4 and arrays are from 0 to 3, thus "-1"
         time.sleep(dwell_time)
         actual_pow = round(actual_pow + step_pow, 2)
         tsl.write(f'POW {actual_pow}')
