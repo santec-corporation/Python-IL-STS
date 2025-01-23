@@ -316,6 +316,9 @@ def power_sweep(tsl, mpm):
     # Plot results
     plot_power_reading(power_array, power_reading)
 
+    print("\nSaving power sweep data to file " + file_saving.FILE_POWER_SWEEP_RESULTS + "...")
+    file_saving.save_power_sweep_results(power_array, power_reading, file_saving.FILE_POWER_SWEEP_RESULTS)
+
 
 def main() -> None:
     """
