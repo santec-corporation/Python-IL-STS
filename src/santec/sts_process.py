@@ -168,25 +168,25 @@ class StsProcess(STSData):
             previous_param_data (dict): Previous sweep parameters settings.
         """
         logger.info("STS set selected channels for measurement")
+
+        self.selected_chans = []
+        # Array of arrays: array 0 displays the connected modules
+        # The following arrays contain ints of available channels of each module
+        self.all_channels = self._mpm.get_modules_and_channels()
+        logger.info(f"Available modules/channels: {self.all_channels}")
+
         if previous_param_data is not None:
             logger.info("Loading selected channels from previous scan params")
             self.selected_chans = previous_param_data["selected_chans"]  # an array, like [1,3,5]
             allModChans = ""
             for this_mod_channel in self.selected_chans:
                 allModChans += ",".join(
-                    [str(element) for element in this_mod_channel]) + "; "  # contains numbers so do a conversion
+                    [str(element) for element in this_mod_channel]) + "; "  # contains numbers so does a conversion
             logger.info("Loaded the selected channels: " + allModChans.strip())
             print("Loaded the selected channels: " + allModChans.strip())
             return None
 
-        self.selected_chans = []
-        # Array of arrays: array 0 displays the connected modules
-        # The following arrays contain ints of available channels of each module
-        self.all_channels = self._mpm.get_modules_and_channels()
-
         print("\nAvailable modules/channels:")
-        logger.info(f"Available modules/channels: {self.all_channels}")
-
         for i, module in enumerate(self.all_channels):
             if not self.all_channels[module]:
                 continue
