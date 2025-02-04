@@ -208,6 +208,19 @@ def connection():
     return tsl, mpm, daq
 
 
+def tsl_power_check(tsl: TslInstrument):
+    current_set_power = tsl.power
+    power = 0.00
+    if current_set_power > 5.00:
+        print("\nPower value should not be greater than 5 dBm.")
+        power = float(input("Please input Output Power (dBm) again: "))
+        while power > 5.00:
+            print("\nInvalid value of Output Power ( <=5 dBm )")
+            power = float(input("Please input Output Power (dBm): "))
+
+    tsl.set_power(power)
+
+
 def wavelength_dependent_loss(tsl, mpm, daq):
     """
     Perform the wavelength-dependent loss measurement.
@@ -226,7 +239,11 @@ def wavelength_dependent_loss(tsl, mpm, daq):
     if mpm is not None:
         ilsts = StsProcess(tsl, mpm, daq)
         ilsts.set_selected_channels(previous_param_data)
-        ilsts.set_selected_ranges(previous_param_data)
+        if ilsts.mpm_215_selection_check():
+            tsl_power_check(tsl)
+            ilsts.selected_ranges = [2]
+        else:
+            ilsts.set_selected_ranges(previous_param_data)
 
         ilsts.set_sts_data_struct()
         ilsts.set_parameters()
@@ -249,12 +266,12 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         ans = "y"
         while ans in "yY":
             print("\nDUT measurement")
-            reps = ""
-            while not reps.isnumeric():
-                reps = input("Input repeat count, and connect the DUT and press ENTER: ")
-                if not reps.isnumeric():
-                    print("Invalid repeat count, enter a number.\n")
-
+            while True:
+                reps = input("Input DUT scan repeat count (greater than 0): ")
+                if reps.isnumeric() and int(reps) > 0:
+                    break
+                print("Invalid repeat count, enter a positive number.\n")
+            input("Connect the DUT and press ENTER")
             for _ in range(int(reps)):
                 print("\nScan {} of {}...".format(str(_ + 1), reps))
                 ilsts.sts_measurement()
@@ -263,7 +280,7 @@ def wavelength_dependent_loss(tsl, mpm, daq):
                     plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
                 time.sleep(1)
 
-            ilsts.get_dut_data()        # Get and store DUT scan data
+            ilsts.get_dut_data()  # Get and store DUT scan data
 
             ans = input("\nRedo Scan ? (y/n): ")
         save_all_data(tsl, previous_param_data, ilsts)
