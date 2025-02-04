@@ -335,7 +335,7 @@ def main() -> None:
         choice = ''
         while choice not in ['1', '2']:
             choice = input("\nMeasurement Options:"
-                           "\n1. Wavelength Dependent Loss (Wavelength sweep)"
+                           "\n1. Wavelength Dependent Loss (IL operation)"
                            "\n2. Power scan"
                            "\nSelect measurement type: ")
         if choice == '1':
