@@ -203,9 +203,14 @@ class TslInstrument(TslData):
             logger.warning("Error while checking TSL ld status",
                            str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        if status != ld_status.LD_ON:
+        while status != ld_status.LD_ON:
             logger.critical("TSL Laser Diode not switched ON.")
-            raise RuntimeError("TSL Laser Diode not switched ON, please run the program once the laser diode is ON.")
+            print("\nTSL laser diode not switched ON.")
+            print("Please switch ON the laser diode.")
+            input("Once the laser diode is switched ON, press Enter...")
+
+            errorcode, status = self.__tsl.Get_LD_Status(status)        # Get the laser diode status
+
         logger.info("Laser diode ON.")
         return errorcode
 
