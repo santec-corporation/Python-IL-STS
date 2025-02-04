@@ -5,11 +5,11 @@ Santec DLLs serve the fundamental base to establish instrument connections and p
 
 ## Contents
 - **Santec.Instrument.dll**
-  - **Version**: 2.9.0
+  - **Version**: 2.9.1
   - **Description**: Establish instrument connections. <br><br>
   
 - **STSProcess.dll**
-  - **Version**: 2.2.6
+  - **Version**: 2.2.7
   - **Description**: Perform Insertion Loss operation. <br><br>
 
 - **Ivi.Visa.dll**

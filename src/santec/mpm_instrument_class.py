@@ -32,14 +32,14 @@ class MpmData:
     """
     averaging_time: float = 0.0
     range_data: list = []
-    modules_and_channels: list = []
+    modules_and_channels: dict
     dynamic_ranges = [
-            '-30 ~ +10dBm',
-            '-40 ~ 0dBm',
-            '-50 ~ -10dBm',
-            '-60 ~ -20dBm',
-            '-80 ~ -30dBm'
-        ]
+        '-30 ~ +10dBm',
+        '-40 ~ 0dBm',
+        '-50 ~ -10dBm',
+        '-60 ~ -20dBm',
+        '-80 ~ -30dBm'
+    ]
 
 
 class MpmInstrument(MpmData):
@@ -73,6 +73,7 @@ class MpmInstrument(MpmData):
     Raises:
         Exception: If the provided interface is not GPIB or LAN.
     """
+
     def __init__(self,
                  interface: str = "GPIB",
                  ip_address: str = "",
@@ -119,7 +120,7 @@ class MpmInstrument(MpmData):
 
         elif "lan" in self.interface:
             self.__mpm.IPAddress = self.ip_address
-            self.__mpm.Port = self.port     # Default Port = 5000.
+            self.__mpm.Port = self.port  # Default Port = 5000.
             self.__mpm.TimeOut = 5000  # timeout value for MPM
             communication_type = CommunicationMethod.TCPIP
 
@@ -128,7 +129,7 @@ class MpmInstrument(MpmData):
             raise RuntimeError("MPM instrument not initialized.")
 
         try:
-            errorcode = self.__mpm.Connect(communication_type)        # Establish the connection
+            errorcode = self.__mpm.Connect(communication_type)  # Establish the connection
 
             if errorcode != 0:
                 self.__mpm.DisConnect()
@@ -207,7 +208,7 @@ class MpmInstrument(MpmData):
             logger.error(f"Failed to read MPM, {e}")
             raise RuntimeError(f"read_mpm failed: {e}")
 
-    def get_modules_and_channels(self) -> list:
+    def get_modules_and_channels(self) -> dict:
         """
         Detects all the modules that are mounted on the MPM (looping on the five possible slots).
         If the detected module is an MPM-212, then the possible optical channels are numbered 1 and 2
@@ -225,15 +226,16 @@ class MpmInstrument(MpmData):
                 and the items in these subarrays are channel numbers.
         """
         logger.info("Get MPM modules and channels")
-        self.modules_and_channels = []
+        self.modules_and_channels = {}
         for slot_count in range(5):
+            module_info = self.__mpm.Information.ModuleType[slot_count]
             if self.__mpm.Information.ModuleEnable[slot_count] is True:
                 if self.check_mpm_212(slot_count) is True:
-                    self.modules_and_channels.append([1, 2])
+                    self.modules_and_channels['MPM-212'] = [1, 2]
                 else:
-                    self.modules_and_channels.append([1, 2, 3, 4])
+                    self.modules_and_channels[str(module_info)] = [1, 2, 3, 4]
             else:
-                self.modules_and_channels.append([])
+                continue
         if len(self.modules_and_channels) == 0:
             logger.warning("No MPM modules / channels were detected.")
             raise Exception("No modules / channels were detected.")
@@ -383,7 +385,8 @@ class MpmInstrument(MpmData):
         errorcode = self.__mpm.Zeroing()
 
         if errorcode != 0:
-            logger.error("Error while performing MPM zeroing, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            logger.error("Error while performing MPM zeroing, ",
+                         str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info(f"MPM zeroing done.")
         return errorcode
@@ -522,7 +525,8 @@ class MpmInstrument(MpmData):
         logging_point = None
         # Constantly get the status in a loop. Increase the MPM timeout for this process.
         while status == 0:
-            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0, 0)  # Updates status, which should break us out of the loop.
+            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0,
+                                                                             0)  # Updates status, which should break us out of the loop.
             break
 
         if errorcode == -999:
@@ -530,7 +534,7 @@ class MpmInstrument(MpmData):
             logger.critical(error_string)
             raise RuntimeError(error_string)
 
-        if errorcode != 0 and status != -1:    # It's a success if either the error code is 0,
+        if errorcode != 0 and status != -1:  # It's a success if either the error code is 0,
             # or the status is -1, otherwise, throw.
             logger.error("Error while waiting for MPM log completion, ",
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
