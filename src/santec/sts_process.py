@@ -10,7 +10,8 @@ import re
 from array import array
 
 # Importing classes from STSProcess DLL
-from Santec.STSProcess import *
+from Santec.STSProcess import (
+    ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type)
 
 # Importing instrument classes and sts error strings
 from .daq_device_class import SpuDevice
@@ -749,11 +750,11 @@ class StsProcess(STSData):
                 logger.error(
                     "The length of the wavelength array is {}, the length of the dut power array is {},"
                     " and the length of the dut monitor is {}. They must all be the same length.".format(
-                        len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
+                        len(wavelength_array), len(rescaled_dut_pwr), len(rescaled_dut_mon)))
                 raise Exception(
                     "The length of the wavelength array is {}, the length of the dut power array is {},"
                     " and the length of the dut monitor is {}. They must all be the same length.".format(
-                        len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon))
+                        len(wavelength_array), len(rescaled_dut_pwr), len(rescaled_dut_mon))
                 )
 
             # print("Channel: {}, Range: {} ".format(data_struct_item.ChannelNumber, data_struct_item.RangeNumber))
