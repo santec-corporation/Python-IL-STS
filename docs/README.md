@@ -9,13 +9,13 @@
 
 
 ## Core Scripts Overview
-- [get_address.py]: Detects connected instruments via GPIB and USB.
-- [tsl_instrument_class.py]: Manages TSL instrument functionality.
-- [mpm_instrument_class.py]: Handles MPM instrument operations.
-- [daq_device_class.py]: Interacts with DAQ devices.
-- [sts_process.py]: Processes data from the Swept Test System.
-- [error_handling_class.py]: Manages errors related to Instrument DLL and STS Process DLL.
-- [file_saving.py]: Records operational data for the Swept Test System.
+- [get_address.py](/./src/santec/get_address.py): Detects connected instruments via GPIB and USB.
+- [tsl_instrument_class.py](/./src/santec/tsl_instrument_class.py): Manages TSL instrument functionality.
+- [mpm_instrument_class.py](/./src/santec/mpm_instrument_class.py): Handles MPM instrument operations.
+- [daq_device_class.py](/./src/santec/daq_device_class.py): Interacts with DAQ devices.
+- [sts_process.py](/./src/santec/sts_process.py): Processes data from the Swept Test System.
+- [error_handling_class.py](/./src/santec/error_handling_class.py): Manages errors related to Instrument DLL and STS Process DLL.
+- [file_saving.py](/./src/santec/file_saving.py): Records operational data for the Swept Test System.
 
 ---
 
