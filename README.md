@@ -4,7 +4,7 @@
 
 <h1 align="left"> Santec IL STS </h1>
 
-Program to measure Insertion Loss using the Santec's Swept Test System. <br> <br>
+Program to measure Insertion Loss. <br> <br>
 
 ## Overview
 
@@ -15,7 +15,7 @@ This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL 
 
 ## Key Features
 
-- Configure the Santec Swept Test System (Light source: TSL series, Power meter: MPM series, DAQ board)
+- Configure the instruments (Light source: TSL series, Power meter: MPM series, DAQ board)
 - Perform wavelength scans
 - Record reference and measurement scan power
 - Calculate and save Insertion Loss (IL) data
@@ -27,12 +27,19 @@ This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL 
 
 ### System Requirements
 
-- **OS:** Windows 10 
-- **Python:** Any version (Version 3.12 recommended)
+**Python:** Any version (Version 3.12 recommended)
+
+**Platform:** Windows 10
 - **Drivers:** 
   - NI-488.2: [Version 20](https://www.ni.com/en/support/downloads/drivers/download.ni-488-2.html#345631)
   - NI-DAQmx: [Version 20](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#346240)
   - NI-VISA: [Version 20](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html#346210)
+
+**Platform:** Windows 11
+- **Drivers:** 
+  - NI-488.2: [2024 Q3](https://www.ni.com/en/support/downloads/drivers/download.ni-488-2.html#544048) (Latest)
+  - NI-DAQmx: [2024 Q4](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#549669) (Latest)
+  - NI-VISA: [2024 Q4](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html#548367) (Latest)
 
 ### Dependencies
 
@@ -49,12 +56,15 @@ The Swept Test System IL PDL Software is designed to function with:
 - _TSL-510, TSL-550, TSL-570, TSL-710 and TSL-770 laser series_
 - _MPM-210 and MPM210H power meter series_
 
-### Supported Instrument Connections 
-_TSL-510, TSL550 and TSL-710_
-- GPIB 
+### Supported Instrument Connections
+- **TSL-510, TSL-550, TSL-710**  
+  **Supported Interfaces**: GPIB
 
-_TSL-570 and TSL-770_
-- GPIB, USB, or LAN
+- **TSL-570, TSL-770**  
+  **Supported Interfaces**: GPIB, USB, or LAN
+
+- **MPM-210H**  
+  **Supported Interfaces**: GPIB, USB, or LAN
 
 ---
 

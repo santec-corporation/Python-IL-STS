@@ -24,9 +24,10 @@ formatted_datetime = now.strftime("%Y%m%d_%Hhr%Mm%Ssec")        # Format the dat
 
 FILE_LAST_SCAN_PARAMS = "last_scan_params.json"
 FILE_LAST_SCAN_REFERENCE_DATA = "last_scan_reference_data.dat"
-FILE_MEASUREMENT_DATA_RESULTS = f"data_measurement_{formatted_datetime}.csv"
-FILE_REFERENCE_DATA_RESULTS = f"data_reference_{formatted_datetime}.csv"
-FILE_DUT_DATA_RESULTS = f"data_dut_{formatted_datetime}.csv"
+FILE_MEASUREMENT_DATA_RESULTS = f"measurement_data_{formatted_datetime}.csv"
+FILE_REFERENCE_DATA_RESULTS = f"reference_data_{formatted_datetime}.csv"
+FILE_DUT_DATA_RESULTS = f"il_data_{formatted_datetime}.csv"
+FILE_POWER_SWEEP_RESULTS = f"power_sweep_results_{formatted_datetime}.csv"
 
 
 def save_sts_parameter_data(tsl: TslInstrument,
@@ -280,3 +281,18 @@ def sts_save_rawdata_unused(ilsts: StsProcess,
             write_st.clear()
             counter += 1
         f.close()
+
+
+def save_power_sweep_results(power_array: list, power_reading: list,
+                             str_filename: str):
+    """ Save power sweep data. """
+    check_and_rename_old_file(str_filename)
+
+    with open(str_filename, mode='w', newline='') as f:
+        writer = csv.writer(f)
+        # Write header
+        writer.writerow(['Power Array (dBm)', 'Power Reading (dBm)'])
+        # Write data rows
+        writer.writerows(zip(power_array, power_reading))
+    print(f'Data successfully saved to {str_filename}')
+
