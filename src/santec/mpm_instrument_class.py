@@ -80,6 +80,7 @@ class MpmInstrument(MpmData):
                  port: int = 5000,
                  instrument: Instrument = None,
                  gpib_connect_type: str = "ni"):
+
         logger.info("Initializing Mpm Instrument class.")
         self.__mpm = MPM()
         self.interface = interface.lower()
@@ -87,6 +88,7 @@ class MpmInstrument(MpmData):
         self.port = port
         self.instrument = instrument
         self.gpib_connect_type = gpib_connect_type.lower()
+
         logger.info(f"Mpm Instrument details, Interface: {interface}, Address: {ip_address},"
                     f" Port: {port}, Instrument:{instrument}, Gpib connect type: {gpib_connect_type}")
 
@@ -106,10 +108,11 @@ class MpmInstrument(MpmData):
         """
         communication_type = None
         logger.info("Connect Mpm instrument")
+
         if self.instrument is not None:
             instrument_resource = self.instrument.ResourceValue
             if "gpib" in self.interface:
-                self.__mpm.Terminator = CommunicationTerminator.CrLf
+                self.__mpm.Terminator = CommunicationTerminator.Lf
                 self.__mpm.GPIBBoard = int(instrument_resource.split('::')[0][-1])
                 self.__mpm.GPIBAddress = int(instrument_resource.split('::')[1])
                 if "ni" in self.gpib_connect_type:
@@ -443,6 +446,7 @@ class MpmInstrument(MpmData):
         """
         logger.info("MPM stop logging")
         errorcode = self.__mpm.Logging_Stop()
+
         if errorcode != 0 and except_if_error is True:
             logger.error("Error while MPM stop logging, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
