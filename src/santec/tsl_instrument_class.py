@@ -41,6 +41,7 @@ class TslData:
     actual_step: float = 0.0
     start_wavelength: float = 0.0
     stop_wavelength: float = 0.0
+    average_wavelength: float = 0.0
     sweep_step: float = 0.0
     sweep_speed: float = 0.0
     sweep_speed_table: list = []
@@ -468,6 +469,7 @@ class TslInstrument(TslData):
                     f"stop_wavelength={stop_wavelength}, sweep_step={sweep_step}, sweep_speed={sweep_speed}")
         self.start_wavelength = start_wavelength
         self.stop_wavelength = stop_wavelength
+        self.average_wavelength = (start_wavelength + stop_wavelength) / 2
         self.sweep_step = sweep_step
         self.sweep_speed = sweep_speed
         self.tsl_busy_check()
@@ -484,7 +486,8 @@ class TslInstrument(TslData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
 
         logger.info(f"TSL sweep params set, actual_step={self.actual_step}")
-        self.tsl_busy_check()
+        self.__tsl.Set_Wavelength(self.average_wavelength)
+        self.tsl_busy_check(5000)
 
     def soft_trigger(self) -> None:
         """
