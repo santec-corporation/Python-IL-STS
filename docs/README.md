@@ -21,9 +21,9 @@
 
 ## LAN Configuration
 
-#### 1. Go to the `main.py` file.
+#### 1. Open the `main.py` file.
 
-#### 2. Replace the code below in the `connection()` function,
+#### 2. Replace the below code in the `connection()` function,
 
 ```python
 def connection():
@@ -32,10 +32,10 @@ def connection():
     daq: SpuDevice
 
     device_address = GetAddress()
-    device_address.initialize_instrument_addresses(tsl_mpm=False)
+    # device_address.initialize_instrument_addresses()
+    # 
     # tsl_instrument = device_address.get_tsl_address()
     # mpm_instrument = device_address.get_mpm_address()
-    dev_address = device_address.get_daq_address()
 
     tsl = TslInstrument(interface="LAN", ip_address="192.168.1.161")  # Replace with your TSL IP address
     tsl.connect()
@@ -43,7 +43,11 @@ def connection():
     mpm = MpmInstrument(interface="LAN", ip_address="192.168.1.162")  # Replace with your MPM IP address
     mpm.connect()
 
-    daq = SpuDevice(device_name=dev_address)
+    if "220" in mpm_instrument.ProductName:
+        return tsl, mpm, None
+
+    daq_address = device_address.get_daq_address()
+    daq = SpuDevice(device_name=daq_address)
     daq.connect()
 
     return tsl, mpm, daq
