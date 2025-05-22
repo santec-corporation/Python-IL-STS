@@ -16,7 +16,7 @@ import platform
 import clr
 
 # About
-__version__ = "2.8.15"
+__version__ = "2.8.16"
 __author__ = "Chentir MT"
 __project_name__ = "Santec_IL_STS"
 __organization__ = "Santec Holdings Corporation"
