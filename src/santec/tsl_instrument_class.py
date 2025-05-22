@@ -134,11 +134,12 @@ class TslInstrument(TslData):
         self.check_supported_instruments()
         communication_type = None
         logger.info("Connect Tsl instrument")
+
         if self.instrument is not None:
             instrument_resource = self.instrument.ResourceValue
             if "gpib" in self.interface:
                 logger.info("Connect Tsl instrument, type GPIB")
-                self.__tsl.Terminator = CommunicationTerminator.CrLf
+                self.__tsl.Terminator = CommunicationTerminator.Cr
                 self.__tsl.GPIBBoard = int(instrument_resource.split('::')[0][-1])
                 self.__tsl.GPIBAddress = int(instrument_resource.split('::')[1])
                 if "ni" in self.gpib_connect_type:
