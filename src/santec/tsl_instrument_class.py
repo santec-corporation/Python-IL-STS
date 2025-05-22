@@ -546,7 +546,7 @@ class TslInstrument(TslData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info("TSL stop sweep done.")
 
-    def tsl_busy_check(self) -> None:
+    def tsl_busy_check(self, time_out: int = 3000) -> None:
         """
         Checks if the TSL is busy performing other operations.
         Default timeout = 3000 ms
@@ -555,7 +555,7 @@ class TslInstrument(TslData):
             InstrumentError: In case, no response from TSL after timeout.
         """
         logger.info("TSL busy check")
-        errorcode = self.__tsl.TSL_Busy_Check(3000)
+        errorcode = self.__tsl.TSL_Busy_Check(time_out)
 
         if errorcode != 0:
             logger.error("Error while TSL busy check",
