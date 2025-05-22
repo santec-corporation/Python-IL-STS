@@ -21,7 +21,7 @@ class Instrument:
     Idn: str = ""
     VendorName: str = ""
     ProductName: str = ""
-    SerialNumber: int = 12345678
+    SerialNumber: str = "12345678"
     VersionNumber: str = ""
     Interface: str = ""
     ResourceValue: str = ""
@@ -51,7 +51,8 @@ class GetAddress:
         self.__cached_daq_address: str = ""
         self.is_disposed: bool = False
 
-    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB", mode: str = "SME", tsl_mpm: bool = True, daq: bool = True) -> None:
+    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB",
+                                        tsl_mpm: bool = True) -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
@@ -59,25 +60,21 @@ class GetAddress:
         Parameters:
             connection_configuration (str):
             The connection configuration or communication mode of the instruments.
-            mode (str): The current STS operation mode.
-                    Default value: "SME".
 
             tsl_mpm: True if initializing TSL and MPM connections via GPIB / USB,
                     else False if using LAN.
                     Default value: True.
 
-            daq: If using the MPM DAQ functionality.
-                Default value: True.
-
         Raises:
             RuntimeError: If no TSL or MPM instruments are found.
         """
-        instruments = []
         logger.info("Initializing Instrument Addresses")
         if connection_configuration.lower() not in ['gpib', 'usb']:
             logger.critical(f"Invalid connection configuration {connection_configuration}.")
             raise RuntimeError(f"Invalid connection configuration {connection_configuration}.")
         self.configuration = connection_configuration
+
+        instruments = []
         if tsl_mpm:
             instruments = self.detect_instruments()
 
@@ -87,8 +84,9 @@ class GetAddress:
 
             self.select_instruments(instruments)
 
-        if mode == 'SME' and daq:
-            self.select_daq_device(instruments)
+        if self.__cached_mpm_address is not None and "220" in self.__cached_mpm_address.ProductName:
+            return
+        self.select_daq_device(instruments)
 
     def detect_instruments(self) -> list:
         """
@@ -149,7 +147,7 @@ class GetAddress:
                 instr.Idn = resource_idn
                 instr.VendorName = idn[0]
                 instr.ProductName = idn[1]
-                instr.SerialNumber = int(idn[2])
+                instr.SerialNumber = idn[2]
                 instr.VersionNumber = idn[3]
                 instr.ResourceValue = resource
                 instr.Interface = "GPIB"
@@ -278,7 +276,7 @@ class GetAddress:
             self.initialize_instrument_addresses()
         return self.__cached_mpm_address
 
-    def get_dev_address(self) -> str:
+    def get_daq_address(self) -> str:
         """
         Returns:
             The user selected DAQ device ip_address.

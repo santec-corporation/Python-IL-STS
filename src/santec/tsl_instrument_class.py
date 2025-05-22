@@ -41,6 +41,7 @@ class TslData:
     actual_step: float = 0.0
     start_wavelength: float = 0.0
     stop_wavelength: float = 0.0
+    average_wavelength: float = 0.0
     sweep_step: float = 0.0
     sweep_speed: float = 0.0
     sweep_speed_table: list = []
@@ -133,11 +134,12 @@ class TslInstrument(TslData):
         self.check_supported_instruments()
         communication_type = None
         logger.info("Connect Tsl instrument")
+
         if self.instrument is not None:
             instrument_resource = self.instrument.ResourceValue
             if "gpib" in self.interface:
                 logger.info("Connect Tsl instrument, type GPIB")
-                self.__tsl.Terminator = CommunicationTerminator.CrLf
+                self.__tsl.Terminator = CommunicationTerminator.Cr
                 self.__tsl.GPIBBoard = int(instrument_resource.split('::')[0][-1])
                 self.__tsl.GPIBAddress = int(instrument_resource.split('::')[1])
                 if "ni" in self.gpib_connect_type:
@@ -396,6 +398,26 @@ class TslInstrument(TslData):
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
 
+    def get_power_logging_data(self) -> list[float]:
+        """
+        Gets the power logging data from the TSL.
+
+        Raises:
+            InstrumentError: If getting the power logging data from the TSL fails.
+
+        Returns:
+            list[float]: List of power logging data.
+        """
+        logger.info("TSL get power logging data.")
+        errorcode, log_count, monitor = self.__tsl.Get_Logging_Data_Power_for_STS(self.sweep_speed,
+                                                                                  self.actual_step, 0, None)
+        if errorcode not in [0, -2]:
+            logger.error("Error while getting TSL power logging data, ",
+                         str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"TSL power logging data acquired, data length={len(monitor)}")
+        return monitor
+
     def set_power(self, power: float) -> None:
         """
         Sets the output power of the TSL.
@@ -468,6 +490,7 @@ class TslInstrument(TslData):
                     f"stop_wavelength={stop_wavelength}, sweep_step={sweep_step}, sweep_speed={sweep_speed}")
         self.start_wavelength = start_wavelength
         self.stop_wavelength = stop_wavelength
+        self.average_wavelength = (start_wavelength + stop_wavelength) / 2
         self.sweep_step = sweep_step
         self.sweep_speed = sweep_speed
         self.tsl_busy_check()
@@ -484,7 +507,8 @@ class TslInstrument(TslData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
 
         logger.info(f"TSL sweep params set, actual_step={self.actual_step}")
-        self.tsl_busy_check()
+        self.__tsl.Set_Wavelength(self.average_wavelength)
+        self.tsl_busy_check(5000)
 
     def soft_trigger(self) -> None:
         """
@@ -542,7 +566,7 @@ class TslInstrument(TslData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info("TSL stop sweep done.")
 
-    def tsl_busy_check(self) -> None:
+    def tsl_busy_check(self, time_out: int = 3000) -> None:
         """
         Checks if the TSL is busy performing other operations.
         Default timeout = 3000 ms
@@ -551,7 +575,7 @@ class TslInstrument(TslData):
             InstrumentError: In case, no response from TSL after timeout.
         """
         logger.info("TSL busy check")
-        errorcode = self.__tsl.TSL_Busy_Check(3000)
+        errorcode = self.__tsl.TSL_Busy_Check(time_out)
 
         if errorcode != 0:
             logger.error("Error while TSL busy check",

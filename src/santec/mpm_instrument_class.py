@@ -80,6 +80,7 @@ class MpmInstrument(MpmData):
                  port: int = 5000,
                  instrument: Instrument = None,
                  gpib_connect_type: str = "ni"):
+
         logger.info("Initializing Mpm Instrument class.")
         self.__mpm = MPM()
         self.interface = interface.lower()
@@ -87,6 +88,7 @@ class MpmInstrument(MpmData):
         self.port = port
         self.instrument = instrument
         self.gpib_connect_type = gpib_connect_type.lower()
+
         logger.info(f"Mpm Instrument details, Interface: {interface}, Address: {ip_address},"
                     f" Port: {port}, Instrument:{instrument}, Gpib connect type: {gpib_connect_type}")
 
@@ -106,10 +108,11 @@ class MpmInstrument(MpmData):
         """
         communication_type = None
         logger.info("Connect Mpm instrument")
+
         if self.instrument is not None:
             instrument_resource = self.instrument.ResourceValue
             if "gpib" in self.interface:
-                self.__mpm.Terminator = CommunicationTerminator.CrLf
+                self.__mpm.Terminator = CommunicationTerminator.Lf
                 self.__mpm.GPIBBoard = int(instrument_resource.split('::')[0][-1])
                 self.__mpm.GPIBAddress = int(instrument_resource.split('::')[1])
                 if "ni" in self.gpib_connect_type:
@@ -364,6 +367,44 @@ class MpmInstrument(MpmData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info("MPM range set.")
 
+    def set_channel_range(self, slot_number: int, channel_number: int, range_value: int) -> None:
+        """
+        Sets the dynamic range value of the MPM channel.
+        """
+        logger.info("MPM set channel range")
+        errorcode = self.__mpm.Set_Range_Each_Channel(slot_number, channel_number, range_value)
+
+        if errorcode != 0:
+            logger.error("Error while setting MPM channel range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM channel range set to {range_value}.")
+
+    def set_read_range_mode(self, mode: str = "AUTO") -> None:
+        """
+        Sets the dynamic range mode of the MPM.
+        """
+        logger.info("MPM set range mode.")
+        if mode == "AUTO":
+            errorcode = self.__mpm.Set_READ_Range_Mode(MPM.READ_Range_Mode.Auto)
+        else:
+            return
+
+        if errorcode != 0:
+            logger.error("Error while setting MPM range mode, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM range mode set to {mode}.")
+
+    def get_read_power_channel(self, slot_number: int, channel_number: int) -> float:
+        """ Gets the read power of a channel."""
+        logger.info("MPM Get_READ_Power_Channel.")
+        errorcode, power = self.__mpm.Get_READ_Power_Channel(slot_number, channel_number, 0)
+
+        if errorcode != 0:
+            logger.error("Error while Get_READ_Power_Channel, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM Get_READ_Power_Channel, power: {power}.")
+        return power
+
     def zeroing(self) -> str:
         """
         Performs a Zeroing on all the MPM modules and channels.
@@ -443,6 +484,7 @@ class MpmInstrument(MpmData):
         """
         logger.info("MPM stop logging")
         errorcode = self.__mpm.Logging_Stop()
+
         if errorcode != 0 and except_if_error is True:
             logger.error("Error while MPM stop logging, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
@@ -473,6 +515,26 @@ class MpmInstrument(MpmData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info(f"MPM slot {slot_number} channel {channel_number}, log data length: {len(list(log_data))}")
         return list(log_data)
+
+    def get_trigger_data(self, slot_number) -> list[float]:
+        """
+        Gets the MPM trigger data.
+
+        Raises:
+            InstrumentError: In case the MPM is busy,
+                        or if getting the averaging time fails.
+
+        Returns:
+            list[float]: List of trigger values.
+        """
+        logger.info("MPM get 216 trigger data.")
+        errorcode, trigger = self.__mpm.Get_216_Triggerdata(slot_number, None)
+        if errorcode != 0:
+            logger.error("Error while getting MPM trigger data, ",
+                         str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM trigger data length: {len(trigger)}")
+        return trigger
 
     def set_logging_parameters(self,
                                start_wavelength: float,
@@ -525,8 +587,8 @@ class MpmInstrument(MpmData):
         logging_point = None
         # Constantly get the status in a loop. Increase the MPM timeout for this process.
         while status == 0:
-            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0,
-                                                                             0)  # Updates status, which should break us out of the loop.
+            # Updates status, which should break us out of the loop.
+            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0, 0)
             break
 
         if errorcode == -999:

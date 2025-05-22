@@ -16,7 +16,7 @@ import platform
 import clr
 
 # About
-__version__ = "2.8.16"
+__version__ = "2.8.17"
 __author__ = "Chentir MT"
 __project_name__ = "Santec_IL_STS"
 __organization__ = "Santec Holdings Corporation"
@@ -136,12 +136,14 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 from . import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
+from .sts_process_2 import StsProcess2
 from .daq_device_class import SpuDevice
 from .tsl_instrument_class import TslInstrument
 from .mpm_instrument_class import MpmInstrument
 
 __all__ = [
     "StsProcess",
+    "StsProcess2",
     "TslInstrument",
     "MpmInstrument",
     "SpuDevice",

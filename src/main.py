@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
 from santec import (TslInstrument, MpmInstrument, SpuDevice,
-                    GetAddress, file_saving, StsProcess, log_to_screen)
+                    GetAddress, file_saving, StsProcess, StsProcess2, log_to_screen)
 
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000
@@ -187,15 +187,16 @@ def plot_power_reading(power_array, power_reading):
 
 
 def connection():
+    """ Detect and connect to the TSL, MPM and DAQ instruments. """
     tsl: TslInstrument
     mpm: MpmInstrument
     daq: SpuDevice
 
     device_address = GetAddress()
     device_address.initialize_instrument_addresses()
+
     tsl_instrument = device_address.get_tsl_address()
     mpm_instrument = device_address.get_mpm_address()
-    dev_address = device_address.get_dev_address()
 
     tsl = TslInstrument(instrument=tsl_instrument)
     tsl.connect()
@@ -203,13 +204,18 @@ def connection():
     mpm = MpmInstrument(instrument=mpm_instrument)
     mpm.connect()
 
-    daq = SpuDevice(device_name=dev_address)
+    if "220" in mpm_instrument.ProductName:
+        return tsl, mpm, None
+
+    daq_address = device_address.get_daq_address()
+    daq = SpuDevice(device_name=daq_address)
     daq.connect()
 
     return tsl, mpm, daq
 
 
 def tsl_power_check(tsl: TslInstrument):
+    """ Check and limit TSL power to 5dBm. """
     current_set_power = tsl.power
     power = 0.00
     if current_set_power > 5.00:
@@ -227,18 +233,23 @@ def wavelength_dependent_loss(tsl, mpm, daq):
     Perform the wavelength-dependent loss measurement.
 
     Args:
-        tsl: The tsl device.
-        mpm: The first tsl device (for ILSTS).
-        daq: The second tsl device (for ILSTS).
+        tsl: The tsl instrument.
+        mpm: The mpm instrument.
+        daq: The daq device.
     """
     # Set the TSL properties
     previous_param_data = prompt_and_get_previous_param_data(
         file_saving.FILE_LAST_SCAN_PARAMS)
     setting_tsl_sweep_params(tsl, previous_param_data)
 
-    # If there is an MPM, create an instance of ILSTS
+    # Initiate and run the ILSTS
     if mpm is not None:
-        ilsts = StsProcess(tsl, mpm, daq)
+        if daq is None:
+            ilsts = StsProcess2(tsl, mpm)       # Used for MPM-220 models
+        else:
+            ilsts = StsProcess(tsl, mpm, daq)   # Used for MPM-200 & 210 models
+
+        # Select channels to be measured.
         ilsts.set_selected_channels(previous_param_data)
         if ilsts.mpm_215_selection_check():
             tsl_power_check(tsl)
@@ -246,24 +257,30 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         else:
             ilsts.set_selected_ranges(previous_param_data)
 
+        # Create the IL STS data structure
         ilsts.set_sts_data_struct()
+
+        # Set Sweep parameters to MPM and DAQ
         ilsts.set_parameters()
 
+        # Check for previously saved reference data
         previous_ref_data_array = None
         if previous_param_data is not None:
             previous_ref_data_array = prompt_and_get_previous_reference_data()
         if previous_ref_data_array is not None:
             ilsts.reference_data_array = previous_ref_data_array
 
+        # Run a reference scan if previously saved reference data not found
         if len(ilsts.reference_data_array) == 0:
             print("\nConnect for Reference measurement and press ENTER")
             print("Reference process:")
+            # IL STS reference scan
             ilsts.sts_reference()
         else:
             print("Loading reference data...")
             ilsts.sts_reference_from_saved_file()
 
-        # Perform the Sweep Operation
+        # Perform the sweep operation
         ans = "y"
         while ans in "yY":
             print("\nDUT measurement")
@@ -275,15 +292,20 @@ def wavelength_dependent_loss(tsl, mpm, daq):
             input("Connect the DUT and press ENTER")
             for _ in range(int(reps)):
                 print("\nScan {} of {}...".format(str(_ + 1), reps))
+
+                # IL STS measurement scan
                 ilsts.sts_measurement()
+
                 user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
                 if user_map_display == "y":
                     plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
-                time.sleep(1)
+
+                time.sleep(0.5)
 
             ilsts.get_dut_data()  # Get and store DUT scan data
 
             ans = input("\nRedo Scan ? (y/n): ")
+
         save_all_data(tsl, previous_param_data, ilsts)
 
 

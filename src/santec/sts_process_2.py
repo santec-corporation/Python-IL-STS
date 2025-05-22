@@ -7,14 +7,14 @@ STS Process Class.
 """
 
 import re
+import time
 from array import array
 
 # Importing classes from STSProcess DLL
-from Santec.STSProcess import (
-    ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type)
+from Santec.STSProcess import PDLSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type
 
 # Importing instrument classes and sts error strings
-from .daq_device_class import SpuDevice
+from .sts_process import STSData
 from .mpm_instrument_class import MpmInstrument
 from .tsl_instrument_class import TslInstrument
 from .error_handling_class import STSProcessError, sts_process_error_strings
@@ -23,59 +23,36 @@ from .error_handling_class import STSProcessError, sts_process_error_strings
 from . import logger
 
 
-class STSData:
+class StsProcess2(STSData):
     """
-    A class to represent the STS Process data.
-    """
-    log_data = []
-    il = []
-    il_data = []
-    il_data_array = []
-    wavelength_table = []
-    range = []
-    ref_data = []
-    ref_monitor = []
-    merge_data = []
-    dut_data = []
-    dut_monitor = []
-    selected_ranges = []
-    all_channels = {}
-    selected_chans = []
-    reference_data_array = []
-    dut_data_array = []
+    STS Process class for MPM 220.
 
-
-class StsProcess(STSData):
-    """
-    STS processing class to set sweep parameters,
+    Class to set sweep parameters,
     perform sweep operations and get sweep operation data.
 
     Attributes:
         _tsl (TslInstrument): TSL instrument class handle.
         _mpm (MpmInstrument): MPM instrument class handle.
-        _spu (SpuDevice): SPU device class handle.
         _ilsts (ILSTS): ILSTS class instance from Santec namespace.
 
     Parameters:
         tsl (TslInstrument): TSL instrument class instance.
         mpm (MpmInstrument): MPM instrument class instance.
-        spu (SpuDevice): SPU device class instance.
     """
 
     def __init__(self,
                  tsl: TslInstrument,
-                 mpm: MpmInstrument,
-                 spu: SpuDevice):
+                 mpm: MpmInstrument
+                 ):
         logger.info("Initializing STS Process class.")
         self._tsl = tsl
         self._mpm = mpm
-        self._spu = spu
-        self._ilsts = ILSTS()
-        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm},"
-                    f" SpuDevice: {spu}")
+
+        self._ilsts = PDLSTS()
+        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm}")
 
     @property
-    def ilsts(self) -> ILSTS:
+    def ilsts(self) -> PDLSTS:
         """
         Returns:
             ILSTS (Santec) class handle from the StsProcess class attributes.
@@ -93,33 +70,24 @@ class StsProcess(STSData):
                         If setting STS sweep parameters fails.
         """
         logger.info("Setting STS params")
+
         # Logging parameters for MPM
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
                                          self._tsl.stop_wavelength,
                                          self._tsl.sweep_step,
-                                         self._tsl.sweep_speed)
-
-        # Logging parameter for SPU(DAQ)
-        self._spu.set_logging_parameters(self._tsl.start_wavelength,
-                                         self._tsl.stop_wavelength,
                                          self._tsl.sweep_speed,
                                          self._tsl.actual_step)
 
-        # Pass MPM averaging time to SPU Class
-        self._spu.AveragingTime = self._mpm.get_averaging_time()
+        time.sleep(0.1)  # Add sleep time for 100ms
 
-        # STS Process setting Class
-        logger.info("Clearing STS meas data")
-        sts_error = self._ilsts.Clear_Measdata()  # Clear measurement data
-        if sts_error != 0:
-            logger.error("Error while clearing measurement data, ",
-                         str(sts_error) + ": " + sts_process_error_strings(sts_error))
-            raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
+        # Set Rescaling mode for STSProcess class
+        logger.info("STS rescaling settings")
+        sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_TSLMonitor,
+                                                      self._mpm.get_averaging_time(),
+                                                      True)
 
-        sts_error = self._ilsts.Clear_Refdata()  # Reference data Clear
-        logger.info("Clearing STS ref data")
         if sts_error != 0:
-            logger.error("Error while clearing reference data, ",
+            logger.error("Error while rescaling setting, ",
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
@@ -145,16 +113,21 @@ class StsProcess(STSData):
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
-        # Set Rescaling mode for STSProcess class
-        logger.info("STS rescaling settings")
-        sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
-                                                      self._mpm.get_averaging_time(),
-                                                      True)
-
+        # STS Process setting Class
+        logger.info("Clearing STS ref data")
+        sts_error = self._ilsts.Clear_Refdata()  # Reference data Clear
         if sts_error != 0:
-            logger.error("Error while rescaling setting, ",
+            logger.error("Error while clearing reference data, ",
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
+
+        logger.info("Clearing STS meas data")
+        sts_error = self._ilsts.Clear_Measdata()  # Clear measurement data
+        if sts_error != 0:
+            logger.error("Error while clearing measurement data, ",
+                         str(sts_error) + ": " + sts_process_error_strings(sts_error))
+            raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
+
         logger.info("STS params set.")
 
     def set_selected_channels(self, previous_param_data: dict) -> None:
@@ -328,6 +301,7 @@ class StsProcess(STSData):
             merge_sts.ChannelNumber = int(ch[1])  # channel number
             merge_sts.SOP = 0
             self.merge_data.append(merge_sts)
+
         logger.info("STS data struct set.")
 
     def clear_sts_data_struct(self) -> None:
@@ -356,18 +330,46 @@ class StsProcess(STSData):
             input("\nConnect Slot{} Ch{}, then press ENTER".format(i.SlotNumber, i.ChannelNumber))
             logger.info("STS reference of Slot{} Ch{}".format(i.SlotNumber, i.ChannelNumber))
 
-            # Set MPM range for 1st setting renge
-            self._mpm.set_range(self.range[0])
+            # Set MPM dynamic range mode to AUTO
+            self._mpm.set_read_range_mode()
+
+            time.sleep(0.1)  # Add sleep time for 100ms
+
+            # Get the read power of the MPM i.ChannelNumber
+            power = self._mpm.get_read_power_channel(i.SlotNumber, i.ChannelNumber)
+
+            # Get the reference range based on the read power
+            reference_range = self.get_reference_range(power)
+
+            # Set the reference range value to the MPM channel
+            self._mpm.set_channel_range(i.SlotNumber, i.ChannelNumber, reference_range)
 
             print("\nScanning...")
+
+                                    # Base sweep process
             self.base_sweep_process()
 
-            # Get sampling data & Add in STSProcess Class
+            # Get sampling data
             self.get_reference_data(i)
 
-            # TSL Sweep stop
+            # TSL sweep stop
             self._tsl.stop_sweep()
+
         logger.info("STS reference completed.")
+
+    @staticmethod
+    def get_reference_range(power: float):
+        """ Returns the optimal range for reference. """
+        if power >= 0:
+            return 1
+        elif power >= -10:
+            return 2
+        elif power >= -20:
+            return 3
+        elif power >= -30:
+            return 4
+        else:
+            return 5
 
     def sts_reference_from_saved_file(self) -> None:
         """
@@ -436,21 +438,29 @@ class StsProcess(STSData):
             STSProcessError: If DUT measurement operation fails.
         """
         logger.info("STS measurement operation")
+
         sweep_count = 1
         for mpm_range in self.range:
+            # Set the MPM dynamic range
             self._mpm.set_range(mpm_range)
+
+            # Base sweep process
             self.base_sweep_process()
-            error_string = self.sts_get_measurement_data(sweep_count)  # Get DUT data
-            # print(error_string)
+
+            # Get the measurement scan data
+            _ = self.sts_get_measurement_data(sweep_count)
+
             sweep_count += 1
 
+        # Call the measurement data for rescaling
         logger.info("Calling meas data for rescaling of mpm_range: ")
-        errorcode = self._ilsts.Cal_MeasData_Rescaling()  # Rescaling
+        errorcode = self._ilsts.Cal_MeasData_Rescaling()
         if errorcode != 0:
             logger.error("Error while performing DUT measurement, ",
                          str(errorcode) + ": " + sts_process_error_strings(errorcode))
             raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
+        # Call the IL merge data
         logger.info("Calling IL merge")
         errorcode = self._ilsts.Cal_IL_Merge(Module_Type.MPM_211)  # Range data merge
         if errorcode != 0:
@@ -458,12 +468,11 @@ class StsProcess(STSData):
                          str(errorcode) + ": " + sts_process_error_strings(errorcode))
             raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        self._tsl.stop_sweep()  # TSL stop
+        # TSL Sweep stop
+        self._tsl.stop_sweep()
 
-        #####################################################################
-
-        # This portion of the code just to get wavelengths and IL data at the end of the scan
-        # It can be commented out if needed
+        # This portion of the code just to get wavelength
+        # and IL data at the end of the scan
         self.wavelength_table = []
         self.il_data = []
         self.il_data_array = []
@@ -493,39 +502,64 @@ class StsProcess(STSData):
         for i in self.il_data_array[0]:
             self.il.append(i)
 
-        #####################################################################
         logger.info("STS measurement operation done.")
 
     def base_sweep_process(self) -> None:
         """
-        Configures TSL/MPM and Daq card to perform a sweep process.
+        Configures TSL & MPM to perform a sweep process.
 
         Raises:
             RuntimeError: If TSL/MPM and Daq instruments are not synchronized
-            TSL or MPM times out or issues with the Daq card.
+            TSL or MPM times out.
             Exception: If there is an issue with TSL sweep process.
         """
         logger.info("STS sweep proces")
+
+        # Start the TSL sweep proces
         self._tsl.start_sweep()
+
+        # Start the MPM logging
         self._mpm.logging_start()
+
         try:
-            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
-            self._spu.sampling_start()
+            # Wait until the TSL is set to "Waiting for trigger" status
+            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=4)
+
+            mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.sweep_speed * 1100)
+            if mpm_wait_time < 5000:
+                mpm_wait_time = 5000
+
+            # Issue the TSL soft trigger
             self._tsl.soft_trigger()
-            self._spu.sampling_wait()
+
+            # Wait until the TSL is set to "Standby" status
+            self._tsl.wait_for_sweep_status(waiting_time=mpm_wait_time, sweep_status=1)
+
+            # Wait for MPM log completion
             self._mpm.wait_for_log_completion()
+
+            # Stop the MPM logging
             self._mpm.logging_stop(True)
+
+            # Wait until the TSL is set to "Standby" status
+            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+
+            # Start the TSL sweep
+            self._tsl.start_sweep()
+
         except RuntimeError as scan_exception:
             self._tsl.stop_sweep(False)
             self._mpm.logging_stop(False)
             logger.error(scan_exception)
             raise scan_exception
+
         except Exception as tsl_exception:
             self._mpm.logging_stop(False)
             logger.error(tsl_exception)
             raise tsl_exception
-        self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+
         logger.info("STS base sweep process done.")
+
         return None
 
     def get_reference_data(self, data_struct_item: STSDataStruct) -> None:
@@ -559,12 +593,18 @@ class StsProcess(STSData):
                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
             raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        # Get SPU sampling data
-        trigger, monitor = self._spu.get_sampling_raw_data()
+        # Get the trigger data from the MPM
+        trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
+
+        # Get the monitor data from the TSL
+        monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
 
         # Add Monitor data for STS Process Class
         logger.info("Adding ref monitor data.")
-        errorcode = self._ilsts.Add_Ref_MonitorData(trigger, monitor, data_struct_item)
+        errorcode = self._ilsts.Add_Ref_MonitorData(trigger_data, monitor_data, data_struct_item)
         if errorcode != 0:
             logger.info("Error while getting ref data, ",
                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
@@ -616,62 +656,15 @@ class StsProcess(STSData):
             "SlotNumber": data_struct_item.SlotNumber,
             "ChannelNumber": data_struct_item.ChannelNumber,
             "log_data": list(self.log_data),
-            # unscaled log data is required if we want to load the reference data later.
-            "trigger": list(array('d', trigger)),
-            # motor positions that correspond to wavelengths. required if we want to load the reference data later.
-            "monitor": list(array('d', monitor)),
-            # unscaled monitor data is required if we want to load the reference data later.
+            "trigger": list(array('d', trigger_data)),
+            "monitor": list(array('d', monitor_data)),
             "rescaled_monitor": list(array('d', rescaled_ref_mon)),  # rescaled monitor data
             "rescaled_wavelength": list(array('d', wavelength_array)),  # all wavelengths, including triggers inbetween.
             "rescaled_reference_power": list(array('d', rescaled_ref_pwr)),  # rescaled reference power
         }
         self.reference_data_array.append(ref_object)
+
         return None
-
-    def get_wavelength_table(self,
-                             data_struct_item: STSDataStruct,
-                             trigger_length: int) -> None:
-        """
-        Gets the list of wavelengths from the most recent scan.
-
-        Parameters:
-            data_struct_item (STSDataStruct): Contains all information of tested module/channel.
-            trigger_length (int): Length of a TSL trigger.
-
-        Raises:
-            Exception: If the length of wavelength array and trigger array are different.
-            STSProcessError: If getting the target wavelength fails.
-        """
-        logger.info("STS get wavelength table")
-        datapoint_count = 0
-        wavelength_array = []
-
-        # Rescaling for reference data
-        logger.info("Calling ref data for rescaling")
-        errorcode = self._ilsts.Cal_RefData_Rescaling()
-        if errorcode != 0:
-            logger.error("Error while getting the target wavelength, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
-
-        errorcode, ref_pwr, ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)  # testing 2...
-        logger.info("Getting target wavelength table")
-        errorcode, wavelength_table = self._ilsts.Get_Target_Wavelength_Table(None)
-        logger.info("Received wavelength table length: %d", len(wavelength_table))
-        # errorcode,wavelength_table = self._ilsts.Get_Target_Wavelength_Table(wavelength_array) #TODO; testing.....
-        if errorcode != 0:
-            logger.error("Error while getting the target wavelength, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
-
-        if len(wavelength_table) != trigger_length:
-            logger.error("The length of the wavelength array is {} but the length of the trigger array is {}. "
-                         "They should have been the same. ".format(len(wavelength_table), trigger_length))
-            raise Exception(
-                "The length of the wavelength array is {} but the length of the trigger array is {}. "
-                "They should have been the same. ".format(len(wavelength_table), trigger_length))
-        logger.info("Wavelength table length: %d", len(wavelength_table))
-        return wavelength_table
 
     def sts_get_measurement_data(self, sweep_count: int) -> int:
         """
@@ -685,6 +678,7 @@ class StsProcess(STSData):
             STSProcessError: If getting the measurement data fails.
         """
         logger.info("STS get measurement data")
+
         errorcode = 0
         for item in self.dut_data:
             if item.SweepCount != sweep_count:
@@ -705,11 +699,14 @@ class StsProcess(STSData):
                              str(errorcode) + ": " + sts_process_error_strings(errorcode))
                 raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        # Get monitor data
-        trigger, monitor = self._spu.get_sampling_raw_data()
+        # Get the trigger data from the MPM
+        trigger = self._mpm.get_trigger_data(0)
 
-        trigger = array("d", trigger)  # List to Array
-        monitor = array("d", monitor)  # list to Array
+        # Get the monitor data from the TSL
+        monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
 
         # Search place of add in
         for item in self.dut_monitor:
@@ -718,12 +715,13 @@ class StsProcess(STSData):
             # Add Monitor data for STSProcess Class with STSDataStruct
             logger.info("Adding meas monitor data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
                         item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount)
-            errorcode = self._ilsts.Add_Meas_MonitorData(trigger, monitor, item)
+            errorcode = self._ilsts.Add_Meas_MonitorData(trigger_data, monitor_data, item)
             if errorcode != 0:
                 logger.error("Error while getting measurement data of: MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
                              item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount,
                              str(errorcode) + ": " + sts_process_error_strings(errorcode))
                 raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+
         return errorcode
 
     def get_dut_data(self) -> None:
@@ -736,13 +734,13 @@ class StsProcess(STSData):
             length of the dut power array, and the dut monitor array are not equal.
         """
         logger.info("STS get dut data")
+
         # After rescaling is done, get the raw dut data
         for data_struct_item in self.dut_data:
             logger.info("Getting meas raw data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
                         data_struct_item.MPMNumber, data_struct_item.SlotNumber, data_struct_item.ChannelNumber,
                         data_struct_item.RangeNumber, data_struct_item.SweepCount)
-            errorcode, rescaled_dut_pwr, rescaled_dut_mon = self._ilsts.Get_Meas_RawData(data_struct_item,
-                                                                                         None, None)
+            errorcode, rescaled_dut_pwr, rescaled_dut_mon = self._ilsts.Get_Meas_RawData(data_struct_item, None, None)
             if errorcode != 0:
                 logger.error("Error while getting meas raw data of: , MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
                              data_struct_item.MPMNumber, data_struct_item.SlotNumber, data_struct_item.ChannelNumber,
@@ -769,18 +767,17 @@ class StsProcess(STSData):
                         len(wavelength_array), len(rescaled_dut_pwr), len(rescaled_dut_mon))
                 )
 
-            # print("Channel: {}, Range: {} ".format(data_struct_item.ChannelNumber, data_struct_item.RangeNumber))
             dut_object = {
                 "MPMNumber": data_struct_item.MPMNumber,
                 "SlotNumber": data_struct_item.SlotNumber,
                 "ChannelNumber": data_struct_item.ChannelNumber,
                 "RangeNumber": data_struct_item.RangeNumber,
                 "rescaled_wavelength": list(array('d', wavelength_array)),
-                # all wavelengths, including triggers in between.
                 "rescaled_dut_monitor": list(array('d', rescaled_dut_mon)),  # rescaled monitor data
                 "rescaled_dut_power": list(array('d', rescaled_dut_pwr)),  # rescaled dut power
             }
             self.dut_data_array.append(dut_object)
+
             logger.info("STS get dut data done.")
 
     def disconnect_instruments(self) -> None:
@@ -791,12 +788,13 @@ class StsProcess(STSData):
             Exception: If disconnecting instruments fails.
         """
         logger.info("Disconnect instrument connections.")
+
         try:
             self._tsl.disconnect()
             self._mpm.disconnect()
-            self._spu.disconnect()
+
         except Exception as e:
             logger.error("Error while disconnecting instruments, %s", e)
             raise Exception("Error while disconnecting instruments, %s", e)
+
         logger.info("Disconnected instrument connections.")
-        
