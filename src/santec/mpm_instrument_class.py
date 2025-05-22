@@ -404,6 +404,7 @@ class MpmInstrument(MpmData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info(f"MPM Get_READ_Power_Channel, power: {power}.")
         return power
+
     def zeroing(self) -> str:
         """
         Performs a Zeroing on all the MPM modules and channels.
@@ -514,6 +515,26 @@ class MpmInstrument(MpmData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info(f"MPM slot {slot_number} channel {channel_number}, log data length: {len(list(log_data))}")
         return list(log_data)
+
+    def get_trigger_data(self, slot_number) -> list[float]:
+        """
+        Gets the MPM trigger data.
+
+        Raises:
+            InstrumentError: In case the MPM is busy,
+                        or if getting the averaging time fails.
+
+        Returns:
+            list[float]: List of trigger values.
+        """
+        logger.info("MPM get 216 trigger data.")
+        errorcode, trigger = self.__mpm.Get_216_Triggerdata(slot_number, None)
+        if errorcode != 0:
+            logger.error("Error while getting MPM trigger data, ",
+                         str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM trigger data length: {len(trigger)}")
+        return trigger
 
     def set_logging_parameters(self,
                                start_wavelength: float,
