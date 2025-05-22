@@ -367,6 +367,43 @@ class MpmInstrument(MpmData):
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         logger.info("MPM range set.")
 
+    def set_channel_range(self, slot_number: int, channel_number: int, range_value: int) -> None:
+        """
+        Sets the dynamic range value of the MPM channel.
+        """
+        logger.info("MPM set channel range")
+        errorcode = self.__mpm.Set_Range_Each_Channel(slot_number, channel_number, range_value)
+
+        if errorcode != 0:
+            logger.error("Error while setting MPM channel range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM channel range set to {range_value}.")
+
+    def set_read_range_mode(self, mode: str = "AUTO") -> None:
+        """
+        Sets the dynamic range mode of the MPM.
+        """
+        logger.info("MPM set range mode.")
+        if mode == "AUTO":
+            errorcode = self.__mpm.Set_READ_Range_Mode(MPM.READ_Range_Mode.Auto)
+        else:
+            return
+
+        if errorcode != 0:
+            logger.error("Error while setting MPM range mode, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM range mode set to {mode}.")
+
+    def get_read_power_channel(self, slot_number: int, channel_number: int) -> float:
+        """ Gets the read power of a channel."""
+        logger.info("MPM Get_READ_Power_Channel.")
+        errorcode, power = self.__mpm.Get_READ_Power_Channel(slot_number, channel_number, 0)
+
+        if errorcode != 0:
+            logger.error("Error while Get_READ_Power_Channel, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"MPM Get_READ_Power_Channel, power: {power}.")
+        return power
     def zeroing(self) -> str:
         """
         Performs a Zeroing on all the MPM modules and channels.
