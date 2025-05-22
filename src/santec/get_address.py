@@ -21,7 +21,7 @@ class Instrument:
     Idn: str = ""
     VendorName: str = ""
     ProductName: str = ""
-    SerialNumber: int = 12345678
+    SerialNumber: str = "12345678"
     VersionNumber: str = ""
     Interface: str = ""
     ResourceValue: str = ""
@@ -51,7 +51,10 @@ class GetAddress:
         self.__cached_daq_address: str = ""
         self.is_disposed: bool = False
 
-    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB", mode: str = "SME", tsl_mpm: bool = True, daq: bool = True) -> None:
+    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB",
+                                        mode: str = "SME",
+                                        tsl_mpm: bool = True,
+                                        daq: bool = True) -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
@@ -149,7 +152,7 @@ class GetAddress:
                 instr.Idn = resource_idn
                 instr.VendorName = idn[0]
                 instr.ProductName = idn[1]
-                instr.SerialNumber = int(idn[2])
+                instr.SerialNumber = idn[2]
                 instr.VersionNumber = idn[3]
                 instr.ResourceValue = resource
                 instr.Interface = "GPIB"
