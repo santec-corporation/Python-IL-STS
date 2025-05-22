@@ -529,8 +529,8 @@ class MpmInstrument(MpmData):
         logging_point = None
         # Constantly get the status in a loop. Increase the MPM timeout for this process.
         while status == 0:
-            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0,
-                                                                             0)  # Updates status, which should break us out of the loop.
+            # Updates status, which should break us out of the loop.
+            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0, 0)
             break
 
         if errorcode == -999:
