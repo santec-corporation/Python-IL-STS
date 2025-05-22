@@ -24,10 +24,10 @@ formatted_datetime = now.strftime("%Y%m%d_%Hhr%Mm%Ssec")        # Format the dat
 
 FILE_LAST_SCAN_PARAMS = "last_scan_params.json"
 FILE_LAST_SCAN_REFERENCE_DATA = "last_scan_reference_data.dat"
-FILE_MEASUREMENT_DATA_RESULTS = f"measurement_data_{formatted_datetime}.csv"
-FILE_REFERENCE_DATA_RESULTS = f"reference_data_{formatted_datetime}.csv"
-FILE_DUT_DATA_RESULTS = f"il_data_{formatted_datetime}.csv"
-FILE_POWER_SWEEP_RESULTS = f"power_sweep_results_{formatted_datetime}.csv"
+FILE_REFERENCE_DATA_RESULTS = f"Reference_Data_{formatted_datetime}.csv"
+FILE_RAW_DATA_RESULTS = f"Raw_Data_{formatted_datetime}.csv"
+FILE_IL_DATA_RESULTS = f"IL_Data_{formatted_datetime}.csv"
+FILE_POWER_SWEEP_RESULTS = f"Power_Sweep_Results_{formatted_datetime}.csv"
 
 
 def save_sts_parameter_data(tsl: TslInstrument,
