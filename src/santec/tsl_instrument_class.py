@@ -398,6 +398,26 @@ class TslInstrument(TslData):
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
 
+    def get_power_logging_data(self) -> list[float]:
+        """
+        Gets the power logging data from the TSL.
+
+        Raises:
+            InstrumentError: If getting the power logging data from the TSL fails.
+
+        Returns:
+            list[float]: List of power logging data.
+        """
+        logger.info("TSL get power logging data.")
+        errorcode, log_count, monitor = self.__tsl.Get_Logging_Data_Power_for_STS(self.sweep_speed,
+                                                                                  self.actual_step, 0, None)
+        if errorcode not in [0, -2]:
+            logger.error("Error while getting TSL power logging data, ",
+                         str(errorcode) + ": " + instrument_error_strings(errorcode))
+            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        logger.info(f"TSL power logging data acquired, data length={len(monitor)}")
+        return monitor
+
     def set_power(self, power: float) -> None:
         """
         Sets the output power of the TSL.
