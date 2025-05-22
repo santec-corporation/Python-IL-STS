@@ -799,3 +799,4 @@ class StsProcess(STSData):
             logger.error("Error while disconnecting instruments, %s", e)
             raise Exception("Error while disconnecting instruments, %s", e)
         logger.info("Disconnected instrument connections.")
+        
