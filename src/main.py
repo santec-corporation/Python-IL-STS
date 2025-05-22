@@ -133,21 +133,22 @@ def save_all_data(tsl: TslInstrument, previous_param_data: dict, ilsts: StsProce
     Returns:
         None
     """
+    print("\n")
     if previous_param_data is None:
-        print("\nSaving parameters to file " + file_saving.FILE_LAST_SCAN_PARAMS + "...")
+        # Saving parameters to file
         file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
 
-    print("\nSaving measurement data to file " + file_saving.FILE_MEASUREMENT_DATA_RESULTS + "...")
-    file_saving.save_measurement_data(ilsts, file_saving.FILE_MEASUREMENT_DATA_RESULTS)
+    # Saving reference data to file
+    file_saving.save_reference_data(ilsts, file_saving.FILE_LAST_SCAN_REFERENCE_DATA)
 
-    print("Saving reference csv data to file " + file_saving.FILE_REFERENCE_DATA_RESULTS + "...")
+    print("Saving Reference data csv to file " + file_saving.FILE_REFERENCE_DATA_RESULTS + "...")
     file_saving.save_reference_result_data(ilsts, file_saving.FILE_REFERENCE_DATA_RESULTS)
 
-    print("Saving DUT data to file " + file_saving.FILE_DUT_DATA_RESULTS + "...")
-    file_saving.save_dut_result_data(ilsts, file_saving.FILE_DUT_DATA_RESULTS)
+    print("Saving Raw data to csv file " + file_saving.FILE_RAW_DATA_RESULTS + "...")
+    file_saving.save_dut_result_data(ilsts, file_saving.FILE_RAW_DATA_RESULTS)
 
-    print("Saving reference data to file " + file_saving.FILE_LAST_SCAN_REFERENCE_DATA + "...")
-    file_saving.save_reference_data(ilsts, file_saving.FILE_LAST_SCAN_REFERENCE_DATA)
+    print("Saving IL data to csv file " + file_saving.FILE_IL_DATA_RESULTS + "...")
+    file_saving.save_measurement_data(ilsts, file_saving.FILE_IL_DATA_RESULTS)
 
 
 def plot_wavelength_dependent_loss(wavelength: list, il_data: list):
@@ -361,7 +362,8 @@ def main() -> None:
             power_sweep(tsl, mpm)
 
         break_script = input('\nDo you want to continue? (Y/n): ')
-    print("Closing program.")
+
+    print("\nClosing program.")
 
 
 if __name__ == "__main__":
