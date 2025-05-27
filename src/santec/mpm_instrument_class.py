@@ -145,6 +145,11 @@ class MpmInstrument(MpmData):
 
         logger.info("Connected to Mpm instrument.")
 
+    def idn(self) -> str:
+        """ Returns the instrument IDN response. """
+        _, response = self.query("*IDN?")
+        return response
+
     def query(self, command: str) -> tuple[int, str]:
         """
         Queries the MPM instrument with a command,

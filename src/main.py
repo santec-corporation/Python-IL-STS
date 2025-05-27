@@ -193,7 +193,7 @@ def connection():
     daq: SpuDevice
 
     device_address = GetAddress()
-    device_address.initialize_instrument_addresses()
+    device_address.initialize_instruments()
 
     tsl_instrument = device_address.get_tsl_address()
     mpm_instrument = device_address.get_mpm_address()
@@ -204,7 +204,7 @@ def connection():
     mpm = MpmInstrument(instrument=mpm_instrument)
     mpm.connect()
 
-    if "220" in mpm_instrument.ProductName:
+    if "220" in mpm.idn():
         return tsl, mpm, None
 
     daq_address = device_address.get_daq_address()

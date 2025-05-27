@@ -184,6 +184,11 @@ class TslInstrument(TslData):
 
         self.check_laser_diode_status()
 
+    def idn(self) -> str:
+        """ Returns the instrument IDN response. """
+        _, response = self.query("*IDN?")
+        return response
+
     def check_laser_diode_status(self) -> int:
         """
         Checks if the TSL laser diode is switched ON, else throws a RuntimeError.
