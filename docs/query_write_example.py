@@ -20,7 +20,7 @@ def main():
     tsl: TslInstrument
     mpm: MpmInstrument
 
-    device_address.initialize_instrument_addresses()
+    device_address.initialize_instruments()
     tsl_address = device_address.get_tsl_address()
     mpm_address = device_address.get_mpm_address()
 

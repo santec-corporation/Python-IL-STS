@@ -51,8 +51,8 @@ class GetAddress:
         self.__cached_daq_address: str = ""
         self.is_disposed: bool = False
 
-    def initialize_instrument_addresses(self, connection_configuration: str = "GPIB",
-                                        tsl_mpm: bool = True) -> None:
+    def initialize_instruments(self, connection_configuration: str = "GPIB",
+                               is_tsl_mpm: bool = True, is_daq: bool = True) -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
@@ -61,8 +61,10 @@ class GetAddress:
             connection_configuration (str):
             The connection configuration or communication mode of the instruments.
 
-            tsl_mpm: True if initializing TSL and MPM connections via GPIB / USB,
+            is_tsl_mpm: True if initializing TSL and MPM connections via GPIB / USB,
                     else False if using LAN.
+                    Default value: True.
+            is_daq: True if initializing the DAQ, else False.
                     Default value: True.
 
         Raises:
@@ -75,7 +77,7 @@ class GetAddress:
         self.configuration = connection_configuration
 
         instruments = []
-        if tsl_mpm:
+        if is_tsl_mpm:
             instruments = self.detect_instruments()
 
             if not instruments:
@@ -84,9 +86,9 @@ class GetAddress:
 
             self.select_instruments(instruments)
 
-        if self.__cached_mpm_address is not None and "220" in self.__cached_mpm_address.ProductName:
-            return
-        self.select_daq_device(instruments)
+        if is_daq:
+            daq_device_address = self.select_daq_device(instruments)
+            self.__cached_daq_address = daq_device_address
 
     def detect_instruments(self) -> list:
         """
@@ -227,7 +229,7 @@ class GetAddress:
 
         return selected_instrument
 
-    def select_daq_device(self, instruments: list) -> None:
+    def select_daq_device(self, instruments: list) -> str | None:
         """
         Prompts the user to select a DAQ device from the available devices
         and stores its ip_address.
@@ -243,8 +245,8 @@ class GetAddress:
         logger.info(f"Current DAQ devices: {daq_devices}")
 
         if not daq_devices:
-            logger.critical("No DAQ device was found.")
-            raise RuntimeError("No DAQ device was found.")
+            logger.critical("No DAQ devices was found.")
+            return
 
         print("\nDetected DAQ devices: ")
         for i, value in enumerate(daq_devices):
@@ -254,7 +256,7 @@ class GetAddress:
         selection = input("Select DAQ board: ")
         daq_device_address = self._system.devices[int(selection) - 1 - len(instruments)].name
         logger.info(f"Selected DAQ instrument: {daq_device_address}")
-        self.__cached_daq_address = daq_device_address
+        return daq_device_address
 
     def get_tsl_address(self) -> Instrument:
         """
@@ -263,7 +265,7 @@ class GetAddress:
             Returns empty string if initialize_instrument_addresses was not initialized.
         """
         if self.__cached_tsl_address is None:
-            self.initialize_instrument_addresses()
+            self.initialize_instruments()
         return self.__cached_tsl_address
 
     def get_mpm_address(self) -> Instrument:
@@ -273,7 +275,7 @@ class GetAddress:
             Returns empty string if initialize_instrument_addresses was not initialized.
         """
         if self.__cached_mpm_address is None:
-            self.initialize_instrument_addresses()
+            self.initialize_instruments()
         return self.__cached_mpm_address
 
     def get_daq_address(self) -> str:
@@ -283,7 +285,7 @@ class GetAddress:
             Returns empty string if initialize_instrument_addresses was not initialized.
         """
         if self.__cached_daq_address is None:
-            self.initialize_instrument_addresses()
+            self.initialize_instruments()
         return self.__cached_daq_address
 
     def dispose(self) -> None:

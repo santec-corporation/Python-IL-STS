@@ -30,19 +30,16 @@ def connection():
     tsl: TslInstrument
     mpm: MpmInstrument
     daq: SpuDevice
-
+    
     device_address = GetAddress()
-    # device_address.initialize_instrument_addresses()
-    # 
-    # tsl_instrument = device_address.get_tsl_address()
-    # mpm_instrument = device_address.get_mpm_address()
+    device_address.initialize_instruments(is_tsl_mpm=False, is_daq=False)
 
     tsl = TslInstrument(interface="LAN", ip_address="192.168.1.161")  # Replace with your TSL IP address
     tsl.connect()
 
     mpm = MpmInstrument(interface="LAN", ip_address="192.168.1.162")  # Replace with your MPM IP address
     mpm.connect()
-
+    
     if "220" in mpm_instrument.ProductName:
         return tsl, mpm, None
 
