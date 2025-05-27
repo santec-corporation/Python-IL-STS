@@ -204,7 +204,7 @@ def connection():
     mpm = MpmInstrument(instrument=mpm_instrument)
     mpm.connect()
 
-    if "220" in mpm_instrument.ProductName:
+    if "220" in mpm.idn():
         return tsl, mpm, None
 
     daq_address = device_address.get_daq_address()
