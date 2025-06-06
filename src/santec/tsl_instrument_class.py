@@ -24,8 +24,8 @@ class TslData:
 
     Attributes:
         max_power (float): The maximum power output of the TSL.
-        spec_max_wav (float): The maximum wavelength of the spectral range of the TSL.
-        spec_min_wav (float): The minimum wavelength of the spectral range of the TSL.
+        spec_max_wav (float): The maximum wavelength of the spectral dynamic_range of the TSL.
+        spec_min_wav (float): The minimum wavelength of the spectral dynamic_range of the TSL.
         power (float): The power setting of the TSL.
         actual_step (float): The step wavelength value of the TSL.
         start_wavelength (float): The starting wavelength for the sweep.

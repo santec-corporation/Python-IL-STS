@@ -27,7 +27,7 @@ class MpmData:
 
     Attributes:
         averaging_time (float): The averaging time of the MPM.
-        range_data (list): The list of range count values of an MPM module.
+        range_data (list): The list of dynamic_range count values of an MPM module.
         modules_and_channels (list): The list of module and channels count values of an MPM.
     """
     averaging_time: float = 0.0
@@ -328,10 +328,10 @@ class MpmInstrument(MpmData):
 
     def get_range(self) -> None:
         """
-        Gets the measurement dynamic range of the MPM module.
-        Depending on the module type, the dynamic range varies.
+        Gets the measurement dynamic dynamic_range of the MPM module.
+        Depending on the module type, the dynamic dynamic_range varies.
 
-        The method appends the range values to range_data attribute of the class.
+        The method appends the dynamic_range values to range_data attribute of the class.
 
         Example:
                 list: if MPM-215: [1],
@@ -347,14 +347,14 @@ class MpmInstrument(MpmData):
             self.range_data = [1, 2, 3, 4]
         else:
             self.range_data = [1, 2, 3, 4, 5]
-        logger.info(f"MPM range data: {self.range_data}")
+        logger.info(f"MPM dynamic_range data: {self.range_data}")
 
     def set_range(self, power_range: int) -> None:
         """
-        Sets the dynamic range value of the MPM.
+        Sets the dynamic dynamic_range value of the MPM.
 
         Args:
-            power_range (int): The dynamic range value to be set.
+            power_range (int): The dynamic dynamic_range value to be set.
 
         **Information**
             Check get_range method for available dynamic ranges.
@@ -362,42 +362,42 @@ class MpmInstrument(MpmData):
         Raises:
             InstrumentError: In case the MPM is busy,
                             or in case the wrong value for power_range is entered,
-                            or if setting MPM range fails.
+                            or if setting MPM dynamic_range fails.
         """
-        logger.info("MPM set range")
+        logger.info("MPM set dynamic_range")
         errorcode = self.__mpm.Set_Range(power_range)
 
         if errorcode != 0:
-            logger.error("Error while setting MPM range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            logger.error("Error while setting MPM dynamic_range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("MPM range set.")
+        logger.info("MPM dynamic_range set.")
 
     def set_channel_range(self, slot_number: int, channel_number: int, range_value: int) -> None:
         """
-        Sets the dynamic range value of the MPM channel.
+        Sets the dynamic dynamic_range value of the MPM channel.
         """
-        logger.info("MPM set channel range")
+        logger.info("MPM set channel dynamic_range")
         errorcode = self.__mpm.Set_Range_Each_Channel(slot_number, channel_number, range_value)
 
         if errorcode != 0:
-            logger.error("Error while setting MPM channel range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            logger.error("Error while setting MPM channel dynamic_range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM channel range set to {range_value}.")
+        logger.info(f"MPM channel dynamic_range set to {range_value}.")
 
     def set_read_range_mode(self, mode: str = "AUTO") -> None:
         """
-        Sets the dynamic range mode of the MPM.
+        Sets the dynamic dynamic_range mode of the MPM.
         """
-        logger.info("MPM set range mode.")
+        logger.info("MPM set dynamic_range mode.")
         if mode == "AUTO":
             errorcode = self.__mpm.Set_READ_Range_Mode(MPM.READ_Range_Mode.Auto)
         else:
             return
 
         if errorcode != 0:
-            logger.error("Error while setting MPM range mode, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
+            logger.error("Error while setting MPM dynamic_range mode, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM range mode set to {mode}.")
+        logger.info(f"MPM dynamic_range mode set to {mode}.")
 
     def get_read_power_channel(self, slot_number: int, channel_number: int) -> float:
         """ Gets the read power of a channel."""

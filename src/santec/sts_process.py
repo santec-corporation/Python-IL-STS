@@ -32,7 +32,7 @@ class STSData:
     il_data = []
     il_data_array = []
     wavelength_table = []
-    range = []
+    dynamic_range = []
     ref_data = []
     ref_monitor = []
     merge_data = []
@@ -254,7 +254,7 @@ class StsProcess(STSData):
 
     def set_selected_ranges(self, previous_param_data: dict) -> None:
         """
-        Sets the optical dynamic range of the MPM.
+        Sets the optical dynamic dynamic_range of the MPM.
 
         Checks if previous sweep parameters setting available,
         if available, then loads the selected ranges from the previous sweep parameters setting.
@@ -278,8 +278,8 @@ class StsProcess(STSData):
             self._mpm.get_range()
             for i in range(len(self._mpm.range_data)):
                 print('{}. {}'.format(i + 1, self._mpm.dynamic_ranges[i]))
-            selection = input("Select a dynamic range (Ex: 1,2,3): ")
-            logger.info("User selected range(s): %s", selection)
+            selection = input("Select a dynamic dynamic_range (Ex: 1,2,3): ")
+            logger.info("User selected dynamic_range(s): %s", selection)
             self.selected_ranges = re.findall(r"[\w']+", selection)
 
         # Convert the string ranges to ints, because that is what the DLL is expecting.
@@ -308,12 +308,12 @@ class StsProcess(STSData):
                 range_index = self.selected_ranges.index(m_range)
                 channel_index = self.selected_chans.index(ch)
 
-                # measurement monitor data need only 1 channel for each range.
+                # measurement monitor data need only 1 channel for each dynamic_range.
                 if channel_index == 0:
                     self.dut_monitor.append(data_st)
-                    self.range.append(m_range)
+                    self.dynamic_range.append(m_range)
 
-                # reference data need only 1 range for each ch
+                # reference data need only 1 dynamic_range for each ch
                 if range_index == 0:
                     self.ref_data.append(data_st)
                     self.ref_monitor.append(data_st)
@@ -339,7 +339,7 @@ class StsProcess(STSData):
             merge_data
             ref_monitor
             ref_data
-            range
+            dynamic_range
         """
         logger.info("Clear all the sts data struct lists.")
         self.dut_monitor.clear()
@@ -347,7 +347,7 @@ class StsProcess(STSData):
         self.merge_data.clear()
         self.ref_monitor.clear()
         self.ref_data.clear()
-        self.range.clear()
+        self.dynamic_range.clear()
 
     def sts_reference(self) -> None:
         """ Take reference data for each module/channel selected by the user. """
@@ -356,8 +356,8 @@ class StsProcess(STSData):
             input("\nConnect Slot{} Ch{}, then press ENTER".format(i.SlotNumber, i.ChannelNumber))
             logger.info("STS reference of Slot{} Ch{}".format(i.SlotNumber, i.ChannelNumber))
 
-            # Set MPM range for 1st setting renge
-            self._mpm.set_range(self.range[0])
+            # Set MPM dynamic_range for 1st setting renge
+            self._mpm.set_range(self.dynamic_range[0])
 
             print("\nScanning...")
             self.base_sweep_process()
@@ -437,7 +437,7 @@ class StsProcess(STSData):
         """
         logger.info("STS measurement operation")
         sweep_count = 1
-        for mpm_range in self.range:
+        for mpm_range in self.dynamic_range:
             self._mpm.set_range(mpm_range)
             self.base_sweep_process()
             error_string = self.sts_get_measurement_data(sweep_count)  # Get DUT data

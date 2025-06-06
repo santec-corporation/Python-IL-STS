@@ -220,12 +220,12 @@ def sts_save_rawdata_unused(ilsts: StsProcess,
                             fpath: str,
                             mpm_range):
     """
-    Save measurement Rawdata for specific range.
+    Save measurement Rawdata for specific dynamic_range.
     Saves raw data (MPM and power monitor) during DUT measurement
     Args:
         ilsts (StsProcess)
         fpath (str): path and file name
-        mpm_range (int): Optical dynamic range of interest
+        mpm_range (int): Optical dynamic dynamic_range of interest
     """
     errorcode, wavelength_table = ilsts.ilsts.Get_Target_Wavelength_Table(None)
     if errorcode != 0:
