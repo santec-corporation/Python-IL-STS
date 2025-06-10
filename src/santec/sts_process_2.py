@@ -346,7 +346,7 @@ class StsProcess2(STSData):
 
             print("\nScanning...")
 
-                                    # Base sweep process
+            # Base sweep process
             self.base_sweep_process()
 
             # Get sampling data
