@@ -21,6 +21,27 @@ from .get_address import Instrument
 from . import logger
 
 
+class ModuleData:
+    """
+    A class to represent the module information of an MPM.
+
+    Attributes:
+        module_number (int): The MPM module number.
+        module_type (str | None): The MPM module type.
+        channels (list): The list of channels of an MPM module.
+    """
+    module_number: int
+    module_type: str | None
+    channels: list = []
+
+    def __init__(self, module_number: int,
+                 module_type: str | None,
+                 channels: list):
+        self.module_number = module_number
+        self.module_type = module_type
+        self.channels = channels
+
+
 class MpmData:
     """
     A class to represent the data for an MPM.
@@ -28,11 +49,11 @@ class MpmData:
     Attributes:
         averaging_time (float): The averaging time of the MPM.
         range_data (list): The list of dynamic_range count values of an MPM module.
-        modules_and_channels (list): The list of module and channels count values of an MPM.
+        modules (list): The list of modules of an MPM.
     """
     averaging_time: float = 0.0
     range_data: list = []
-    modules_and_channels: dict
+    modules: list = []
     dynamic_ranges = [
         '-30 ~ +10dBm',
         '-40 ~ 0dBm',
@@ -216,39 +237,35 @@ class MpmInstrument(MpmData):
             logger.error(f"Failed to read MPM, {e}")
             raise RuntimeError(f"read_mpm failed: {e}")
 
-    def get_modules_and_channels(self) -> dict:
+    def get_modules(self) -> list:
         """
         Detects all the modules that are mounted on the MPM (looping on the five possible slots).
         If the detected module is an MPM-212, then the possible optical channels are numbered 1 and 2
         Else, then the possible optical channels are numbered from 1 to 4.
-        If no module is detected, then the method returns an empty array.
+        If no module is detected, then the method assigns an empty list.
 
         Raises:
             Exception: In case no modules were detected on the MPM.
 
         Returns:
-            list: A list of the MPM modules and channels count.
-            Example:
-                [[1,2,3,4],[1,2], [], [], []]
-                Where the item index is the slot number (in the example above slots 0 and 1 contain modules),
-                and the items in these subarrays are channel numbers.
+            list: A list of the MPM modules.
         """
-        logger.info("Get MPM modules and channels")
-        self.modules_and_channels = {}
+        logger.info("Get the MPM modules")
+
         for slot_count in range(5):
             module_info = self.__mpm.Information.ModuleType[slot_count]
             if self.__mpm.Information.ModuleEnable[slot_count] is True:
                 if self.check_mpm_212(slot_count) is True:
-                    self.modules_and_channels['MPM-212'] = [1, 2]
+                    self.modules.append(ModuleData(slot_count, "MPM-212", [1, 2]))
                 else:
-                    self.modules_and_channels[str(module_info)] = [1, 2, 3, 4]
+                    self.modules.append(ModuleData(slot_count, module_info, [1, 2, 3, 4]))
             else:
-                continue
-        if len(self.modules_and_channels) == 0:
-            logger.warning("No MPM modules / channels were detected.")
-            raise Exception("No modules / channels were detected.")
-        logger.info(f"Detected MPM modules and channels: {self.modules_and_channels}")
-        return self.modules_and_channels
+                self.modules.append(ModuleData(slot_count, None, []))
+        if len(self.modules) == 0:
+            logger.warning("No MPM modules were detected.")
+            raise Exception("No modules were detected.")
+        logger.info(f"Detected MPM modules: {self.modules}")
+        return self.modules
 
     def check_module_type(self) -> tuple[bool, bool]:
         """

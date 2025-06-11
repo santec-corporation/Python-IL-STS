@@ -146,8 +146,8 @@ class StsProcess2(STSData):
         self.selected_chans = []
         # Array of arrays: array 0 displays the connected modules
         # The following arrays contain ints of available channels of each module
-        self.all_channels = self._mpm.get_modules_and_channels()
-        logger.info(f"Available modules/channels: {self.all_channels}")
+        self.all_modules = self._mpm.get_modules()
+        logger.info(f"Available modules: {self.all_modules}")
 
         if previous_param_data is not None:
             logger.info("Loading selected channels from previous scan params")
@@ -161,10 +161,11 @@ class StsProcess2(STSData):
             return None
 
         print("\nAvailable modules/channels:")
-        for i, module in enumerate(self.all_channels):
-            if not self.all_channels[module]:
+        for module in self.all_modules:
+            if module.module_type is None:
                 continue
-            print("\r" + "Module {}: {} - Channels: {}".format(i + 1, module, self.all_channels[module]))
+            print("\r" + "Module No. {}: {} - Channels: {}".format(module.module_number, module.module_type,
+                                                                   module.channels))
 
         mpm_choices = {'1': self.set_all_channels,
                        '2': self.set_even_channels,
@@ -181,25 +182,25 @@ class StsProcess2(STSData):
     def set_all_channels(self):
         """ Selects all modules and all channels that are connected to MPM. """
         logger.info("Selecting all channels for operation")
-        for i, module in enumerate(self.all_channels):
-            for j in self.all_channels[module]:
-                self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                self.selected_chans.append([module.module_number, channel_number])
 
     def set_even_channels(self) -> None:
         """ Selects only even channels on the MPM. """
         logger.info("Selecting even channels for operation")
-        for i, module in enumerate(self.all_channels):
-            for j in self.all_channels[module]:
-                if j % 2 == 0:
-                    self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 == 0:
+                    self.selected_chans.append([module.module_number, channel_number])
 
     def set_odd_channels(self) -> None:
         """ Selects only odd channels on the MPM. """
         logger.info("Selecting odd channels for operation")
-        for i, module in enumerate(self.all_channels):
-            for j in self.all_channels[module]:
-                if j % 2 != 0:
-                    self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 != 0:
+                    self.selected_chans.append([module.module_number, channel_number])
 
     def set_special_channels(self) -> None:
         """ Manually enter/select the channels to be measured. """
@@ -215,13 +216,14 @@ class StsProcess2(STSData):
         logger.info("Special channels set.")
 
     def mpm_215_selection_check(self) -> bool:
-        modules_channels_info = list(self.all_channels.keys())
+        """ Checks if an MPM-215 module is present and returns a boolean. """
+        modules_info = self.all_modules
         selected_channels = self.selected_chans
         use_mpm_215_flag = False
 
         for selection in selected_channels:
             module_no = int(selection[0])
-            if modules_channels_info[module_no] == 'MPM-215':
+            if modules_info[module_no].module_type == 'MPM-215':
                 use_mpm_215_flag = True
         return use_mpm_215_flag
 
@@ -346,7 +348,7 @@ class StsProcess2(STSData):
 
             print("\nScanning...")
 
-                                    # Base sweep process
+            # Base sweep process
             self.base_sweep_process()
 
             # Get sampling data
