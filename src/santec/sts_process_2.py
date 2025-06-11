@@ -182,25 +182,25 @@ class StsProcess2(STSData):
     def set_all_channels(self):
         """ Selects all modules and all channels that are connected to MPM. """
         logger.info("Selecting all channels for operation")
-        for i, module in enumerate(self.all_modules):
-            for j in self.all_modules[module]:
-                self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                self.selected_chans.append([module.module_number, channel_number])
 
     def set_even_channels(self) -> None:
         """ Selects only even channels on the MPM. """
         logger.info("Selecting even channels for operation")
-        for i, module in enumerate(self.all_modules):
-            for j in self.all_modules[module]:
-                if j % 2 == 0:
-                    self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 == 0:
+                    self.selected_chans.append([module.module_number, channel_number])
 
     def set_odd_channels(self) -> None:
         """ Selects only odd channels on the MPM. """
         logger.info("Selecting odd channels for operation")
-        for i, module in enumerate(self.all_modules):
-            for j in self.all_modules[module]:
-                if j % 2 != 0:
-                    self.selected_chans.append([i, j])
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 != 0:
+                    self.selected_chans.append([module.module_number, channel_number])
 
     def set_special_channels(self) -> None:
         """ Manually enter/select the channels to be measured. """
