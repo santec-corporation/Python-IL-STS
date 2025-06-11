@@ -78,13 +78,14 @@ class GetAddress:
 
         instruments = []
         if is_tsl_mpm:
-            instruments = self.detect_instruments()
+            if self.__cached_tsl_address is None and self.__cached_mpm_address is None:
+                instruments = self.detect_instruments()
 
-            if not instruments:
-                logger.critical("No TSL or MPM instruments were found.")
-                raise RuntimeError("No TSL or MPM instruments were found.")
+                if not instruments:
+                    logger.critical("No TSL or MPM instruments were found.")
+                    raise RuntimeError("No TSL or MPM instruments were found.")
 
-            self.select_instruments(instruments)
+                self.select_instruments(instruments)
 
         if is_daq:
             daq_device_address = self.select_daq_device(instruments)
@@ -246,7 +247,7 @@ class GetAddress:
 
         if not daq_devices:
             logger.critical("No DAQ devices was found.")
-            return
+            raise Exception("No DAQ devices was found.")
 
         print("\nDetected DAQ devices: ")
         for i, value in enumerate(daq_devices):
