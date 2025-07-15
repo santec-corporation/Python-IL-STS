@@ -1,5 +1,7 @@
-
 ## Detailed README
+
+[![en](https://img.shields.io/badge/lang-en-blue.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/docs/README.md)
+[![jp](https://img.shields.io/badge/lang-jp-red.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/docs/README.jp.md)
 
 > [!IMPORTANT]    
 > ⚠️ Crucial information below.
@@ -105,10 +107,10 @@ If recorded reference data is available, the script will prompt you to upload th
 
 ## Sweep Configuration Parameters
 
-File type: [JSON](https://www.json.org/json-en.html) <br>
-File name: **last_scan_params.json**
+**File type** [JSON](https://www.json.org/json-en.html) <br>
+**File name** **last_scan_params.json**
 
-### Example:
+### Example
   ```json
   {
       "selected_chans": [
@@ -128,23 +130,30 @@ File name: **last_scan_params.json**
   }
   ```
 ### Customization Tips
-**Channel Selection:** Adjust the selected_chans array to include any channels necessary for your analysis.
+**Channel Selection**<br>
+Adjust the **selected_chans** array to include any channels necessary for your analysis.
 Each combination allows you to compare different configurations.
 
-**Range Selection:** Modify selected_ranges to select specific ranges, according to your experimental design.
+**Range Selection**<br>
+Modify **selected_ranges** to select specific ranges, according to your experimental design.
 Ensure the indices match your available range options.
 
-**Wavelength Settings:**
-Change start_wavelength and stop_wavelength to define the spectral range of interest for your measurements.
+**Wavelength Settings**<br>
+Change **start_wavelength** and **stop_wavelength** to define the spectral range of interest for your measurements.
 
-**Sweep Parameters:**
+**Sweep Parameters**<br>
 
-**Step Size:** Tweak sweep_step for finer or coarser sampling; smaller steps yield more detailed data.
-**Speed:** Adjust sweep_speed based on how quickly you need results versus the precision required.
-**Power Adjustment:**
+**Step Size**<br>
+Tweak **sweep_step** for finer or coarser sampling; smaller steps yield more detailed data.
+
+**Speed**<br>
+Adjust **sweep_speed** based on how quickly you need results versus the precision required.
+
+**Power Adjustment**<br>
 Set the power parameter based on your equipment's requirements and desired sensitivity during measurements.
 
-**Actual Step:** The step size between two TSL triggers. This value is obtained after setting the TSL sweep parameters, refer to `set_sweep_parameters` of the `tsl_instrument_class`.
+**Actual Step**<br>
+The step size between two TSL triggers. This value is obtained after setting the TSL sweep parameters, refer to `set_sweep_parameters` of the `tsl_instrument_class`.
 
 ---
 
@@ -159,21 +168,3 @@ Set the power parameter based on your equipment's requirements and desired sensi
    
 
 ### For more information on the Swept Test System [CLICK HERE](https://inst.santec.com/products/componenttesting/sts)
-
-
-[^1]: [TSL]: Tunable Semiconductor Laser. This is the name of the laser (light source) we are manufacturing.
-[^2]: [MPM]: Multiport Power Meter. It measures the light intensity.
-[^3]: [WDL]: Wavelength-Dependent Loss. For further info, see IL.
-[^4]: [IL]: Insertion Loss. It is the amount of light lost in a DUT. This is a relative measurement compared to a   Reference. It is measured in dB.
-[^6]: [STS]: Swept Test System.
-[^5]: NIDAQ Driver: also known as NI-DAS, is a driver used for Data Acquisition/
-
-[//]: # (Below are the links to the Python scripts of the main IL_STS repo)
-[main.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/main.py>
-[get_address.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/get_address.py>
-[tsl_instrument_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/tsl_instrument_class.py>
-[mpm_instrument_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/mpm_instrument_class.py>
-[daq_device_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/daq_device_class.py>
-[sts_process.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/sts_process.py>
-[error_handling_class.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/error_handling_class.py>
-[file_saving.py]: <https://github.com/santec-corporation/Santec_IL_STS/blob/stable/santec/file_saving.py>

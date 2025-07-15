@@ -1,17 +1,20 @@
 
-<p align="right"> <a href="https://www.santec.com/jp/" target="_blank" rel="noreferrer"> <img src="https://www.santec.com/dcms_media/image/common_logo01.png" alt="santec" 
+<p align="right"> <a href="https://www.santec.com/en/" target="_blank" rel="noreferrer"> <img src="https://www.santec.com/dcms_media/image/common_logo01.png" alt="santec" 
   width="250" height="45"/> </a> </p>
 
 <h1 align="left"> Santec IL STS </h1>
 
 Program to measure Insertion Loss. <br> <br>
 
+[![en](https://img.shields.io/badge/lang-en-blue.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/README.md)
+[![jp](https://img.shields.io/badge/lang-jp-red.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/README.jp.md)
+
 ## Overview
 
 The **Santec_IL_STS** is designed to configure and operate the Santec Swept Test System (STS). <br>
 This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL and MPM series instruments.
 
----
+--- 
 
 ## Key Features
 

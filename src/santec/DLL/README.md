@@ -1,5 +1,8 @@
 # About DLLs
 
+[![en](https://img.shields.io/badge/lang-en-blue.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/src/santec/DLL/README.md)
+[![jp](https://img.shields.io/badge/lang-jp-red.svg)](https://github.com/santec-corporation/Python-IL-STS/blob/main/src/santec/DLL/README.jp.md)
+
 ## Overview
 Santec DLLs serve the fundamental base to establish instrument connections and perform IL operations.
 
@@ -40,8 +43,7 @@ Santec DLLs serve the fundamental base to establish instrument connections and p
   
 ## Contact
 **Organization**: Santec Holdings Corp. <br>
-**Website**: https://www.santec.com/ <br>
+**Website**: https://www.santec.com/en/ <br>
 **GitHub**: https://github.com/santec-corporation <br>
 **Contact Us**: https://www.santec.com/en/inquiry/ <br>
 **Support Hours**: Monday to Friday, 9AM – 6PM (JST) 
-
