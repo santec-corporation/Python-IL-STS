@@ -7,11 +7,12 @@ STS Process Class.
 """
 
 import re
+import time
 from array import array
+from dataclasses import dataclass
 
 # Importing classes from STSProcess DLL
-from Santec.STSProcess import (
-    ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type)
+from Santec.STSProcess import ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type
 
 # Importing instrument classes and sts error strings
 from .daq_device_class import SpuDevice
@@ -22,7 +23,7 @@ from .error_handling_class import STSProcessError, sts_process_error_strings
 # Import program logger
 from . import logger
 
-
+@dataclass
 class STSData:
     """
     A class to represent the STS Process data.
@@ -65,7 +66,7 @@ class StsProcess(STSData):
     def __init__(self,
                  tsl: TslInstrument,
                  mpm: MpmInstrument,
-                 spu: SpuDevice):
+                 spu: SpuDevice = None):
         logger.info("Initializing STS Process class.")
         self._tsl = tsl
         self._mpm = mpm
@@ -93,6 +94,7 @@ class StsProcess(STSData):
                         If setting STS sweep parameters fails.
         """
         logger.info("Setting STS params")
+
         # Logging parameters for MPM
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
                                          self._tsl.stop_wavelength,
@@ -100,29 +102,49 @@ class StsProcess(STSData):
                                          self._tsl.sweep_speed)
 
         # Logging parameter for SPU(DAQ)
-        self._spu.set_logging_parameters(self._tsl.start_wavelength,
-                                         self._tsl.stop_wavelength,
-                                         self._tsl.sweep_speed,
-                                         self._tsl.actual_step)
+        if self._spu is not None:
+            self._spu.set_logging_parameters(self._tsl.start_wavelength,
+                                             self._tsl.stop_wavelength,
+                                             self._tsl.sweep_speed,
+                                             self._tsl.actual_step)
 
-        # Pass MPM averaging time to SPU Class
-        self._spu.AveragingTime = self._mpm.get_averaging_time()
+            # Pass MPM averaging time to SPU Class
+            self._spu.AveragingTime = self._mpm.get_averaging_time()
 
-        # STS Process setting Class
-        logger.info("Clearing STS meas data")
-        sts_error = self._ilsts.Clear_Measdata()  # Clear measurement data
-        if sts_error != 0:
-            logger.error("Error while clearing measurement data, ",
-                         str(sts_error) + ": " + sts_process_error_strings(sts_error))
-            raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
+        # Add sleep time for 100ms
+        time.sleep(0.1)
 
-        sts_error = self._ilsts.Clear_Refdata()  # Reference data Clear
+        # Reference data Clear
+        self._clear_reference_data()
+
+        # Clear measurement data
+        self._clear_measurement_data()
+
+        # Set Rescaling mode for STSProcess class
+        self._set_rescaling_set()
+
+        # Create sweep wavelength table
+        self._create_wavelength_table()
+
+        logger.info("STS params set.")
+
+    def _clear_reference_data(self):
+        sts_error = self._ilsts.Clear_Refdata()
         logger.info("Clearing STS ref data")
         if sts_error != 0:
             logger.error("Error while clearing reference data, ",
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
+    def _clear_measurement_data(self):
+        logger.info("Clearing STS meas data")
+        sts_error = self._ilsts.Clear_Measdata()
+        if sts_error != 0:
+            logger.error("Error while clearing measurement data, ",
+                         str(sts_error) + ": " + sts_process_error_strings(sts_error))
+            raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
+
+    def _create_wavelength_table(self):
         # Make Wavelength table at sweep
         logger.info("Making sweep wavelength table")
         sts_error = self._ilsts.Make_Sweep_Wavelength_Table(self._tsl.start_wavelength,
@@ -145,7 +167,7 @@ class StsProcess(STSData):
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
-        # Set Rescaling mode for STSProcess class
+    def _set_rescaling_set(self):
         logger.info("STS rescaling settings")
         sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
                                                       self._mpm.get_averaging_time(),
@@ -155,7 +177,6 @@ class StsProcess(STSData):
             logger.error("Error while rescaling setting, ",
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
-        logger.info("STS params set.")
 
     def set_selected_channels(self, previous_param_data: dict) -> None:
         """
