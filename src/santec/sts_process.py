@@ -548,12 +548,16 @@ class StsProcess(STSData):
         # Create the IL STS data structure
         self._set_sts_data_struct()
 
+        actual_step = 0.0
+        if not self._spu:
+            actual_step = self._tsl.actual_step
+
         # Logging parameters for MPM
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
                                          self._tsl.stop_wavelength,
                                          self._tsl.sweep_step,
                                          self._tsl.sweep_speed,
-                                         self._tsl.actual_step)
+                                         actual_step)
 
         # Logging parameter for SPU(DAQ)
         if self._spu:
