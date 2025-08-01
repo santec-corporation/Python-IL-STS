@@ -305,8 +305,8 @@ class StsProcess(STSData):
         # Add MPM Logging data for STS Process Class
         self.log_data = array('d', log_data)  # List to Array
         logger.info(
-            f"Reference log details: MPMNumber={data_struct_item.MPMNumber}, SlotNumber={data_struct_item.SlotNumber}"
-            f"ChannelNumber={data_struct_item.ChannelNumber}, RangeNumber={data_struct_item.RangeNumber},"
+            f"Reference log details: MPMNumber={data_struct_item.MPMNumber}, SlotNumber={data_struct_item.SlotNumber}, "
+            f"ChannelNumber={data_struct_item.ChannelNumber}, RangeNumber={data_struct_item.RangeNumber}, "
             f"Log data length={len(log_data)}")
 
         logger.info("Adding ref mpm channel data.")
@@ -714,26 +714,26 @@ class StsProcess(STSData):
                                                                      matched_data_structure.ChannelNumber))
 
             logger.info("Adding ref mpm channel data")
-            errorcode = self._ilsts.Add_Ref_MPMData_CH(cached_ref_object["log_data"], matched_data_structure)
-            if errorcode != 0:
+            error_code = self._ilsts.Add_Ref_MPMData_CH(cached_ref_object["log_data"], matched_data_structure)
+            if error_code != 0:
                 logger.error("Error while loading ref data, ",
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
             logger.info("Adding ref monitor data")
-            errorcode = self._ilsts.Add_Ref_MonitorData(cached_ref_object["trigger"], cached_ref_object["monitor"],
+            error_code = self._ilsts.Add_Ref_MonitorData(cached_ref_object["trigger"], cached_ref_object["monitor"],
                                                         matched_data_structure)
-            if errorcode != 0:
+            if error_code != 0:
                 logger.error("Error while loading ref data, ",
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
             logger.info("Calling ref data for rescaling")
-            errorcode = self._ilsts.Cal_RefData_Rescaling()  # Rescaling for reference data.
-            if errorcode != 0:
+            error_code = self._ilsts.Cal_RefData_Rescaling()  # Rescaling for reference data.
+            if error_code != 0:
                 logger.error("Error while loading ref data, ",
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
     def sts_measurement(self) -> None:
         """
@@ -789,21 +789,21 @@ class StsProcess(STSData):
 
         # Rescaling for reference data
         logger.info("Calling ref data for rescaling")
-        errorcode = self._ilsts.Cal_RefData_Rescaling()
-        if errorcode != 0:
+        error_code = self._ilsts.Cal_RefData_Rescaling()
+        if error_code != 0:
             logger.error("Error while getting the target wavelength, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                         str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
-        errorcode, ref_pwr, ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)  # testing 2...
+        error_code, ref_pwr, ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)  # testing 2...
         logger.info("Getting target wavelength table")
-        errorcode, wavelength_table = self._ilsts.Get_Target_Wavelength_Table(None)
+        error_code, wavelength_table = self._ilsts.Get_Target_Wavelength_Table(None)
         logger.info("Received wavelength table length: %d", len(wavelength_table))
-        # errorcode,wavelength_table = self._ilsts.Get_Target_Wavelength_Table(wavelength_array) #TODO; testing.....
-        if errorcode != 0:
+        # error_code,wavelength_table = self._ilsts.Get_Target_Wavelength_Table(wavelength_array) #TODO; testing.....
+        if error_code != 0:
             logger.error("Error while getting the target wavelength, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                         str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         if len(wavelength_table) != trigger_length:
             logger.error("The length of the wavelength array is {} but the length of the trigger array is {}. "
