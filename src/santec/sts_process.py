@@ -253,18 +253,21 @@ class StsProcess(STSData):
         else:
             return 5
 
-    def _base_sweep_process(self) -> None:
+    def _base_sweep_process(self, sweep_index: str = "") -> None:
         """
         Configures TSL & MPM (& DAQ) to perform a sweep process.
 
+        Parameters:
+            sweep_index(str): Current sweeping index. Example: Range 1
+            Default: empty string
+
         Raises:
-            RuntimeError: If TSL/MPM and Daq instruments are not synchronized
-            TSL or MPM times out.
+            RuntimeError: If TSL/MPM and Daq instruments are not synchronized, TSL or MPM times out.
             Exception: If there is an issue with TSL sweep process.
         """
         logger.info("STS sweep proces")
 
-        print("\nScanning Started....")
+        print(f"\nScanning{sweep_index} Started....")
 
         # Start the TSL sweep proces
         self._tsl.start_sweep()
@@ -793,7 +796,7 @@ class StsProcess(STSData):
             self._mpm.set_range(mpm_range)
 
             # Base sweep process
-            self._base_sweep_process()
+            self._base_sweep_process(f" Range {mpm_range}")
 
             # Get the measurement scan data
             _ = self._get_measurement_data(sweep_count)
