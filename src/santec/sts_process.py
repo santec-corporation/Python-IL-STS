@@ -552,7 +552,8 @@ class StsProcess(STSData):
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
                                          self._tsl.stop_wavelength,
                                          self._tsl.sweep_step,
-                                         self._tsl.sweep_speed)
+                                         self._tsl.sweep_speed,
+                                         self._tsl.actual_step)
 
         # Logging parameter for SPU(DAQ)
         if self._spu:
