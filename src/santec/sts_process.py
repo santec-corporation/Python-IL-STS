@@ -534,7 +534,7 @@ class StsProcess(STSData):
         for mpm_range in self.dynamic_range:
             self._mpm.set_range(mpm_range)
             self._base_sweep_process()
-            error_string = self.sts_get_measurement_data(sweep_count)  # Get DUT data
+            error_string = self._get_measurement_data(sweep_count)  # Get DUT data
             # print(error_string)
             sweep_count += 1
 
@@ -621,7 +621,7 @@ class StsProcess(STSData):
                         str(error_code) + ": " + sts_process_error_strings(error_code))
             raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
-        # Get SPU sampling data
+        # Get trigger and monitor data
         if self._spu:
             trigger, monitor = self._spu.get_sampling_raw_data()
         else:
@@ -741,7 +741,7 @@ class StsProcess(STSData):
         logger.info("Wavelength table length: %d", len(wavelength_table))
         return wavelength_table
 
-    def sts_get_measurement_data(self, sweep_count: int) -> int:
+    def _get_measurement_data(self, sweep_count: int) -> int:
         """
         Gets logged data during DUT measurement.
 
@@ -753,7 +753,8 @@ class StsProcess(STSData):
             STSProcessError: If getting the measurement data fails.
         """
         logger.info("STS get measurement data")
-        errorcode = 0
+
+        error_code = 0
         for item in self.dut_data:
             if item.SweepCount != sweep_count:
                 continue
@@ -767,17 +768,24 @@ class StsProcess(STSData):
 
             # Add MPM Logging data for STSProcess Class with STSDatastruct
             logger.info("Adding meas mpm channel data")
-            errorcode = self._ilsts.Add_Meas_MPMData_CH(log_data, item)
-            if errorcode != 0:
+            error_code = self._ilsts.Add_Meas_MPMData_CH(log_data, item)
+            if error_code != 0:
                 logger.error("Error while getting measurement data, ",
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
-        # Get monitor data
-        trigger, monitor = self._spu.get_sampling_raw_data()
+        # Get trigger and monitor data
+        if self._spu:
+            trigger, monitor = self._spu.get_sampling_raw_data()
+        else:
+            # Get the trigger data from the MPM
+            trigger = self._mpm.get_trigger_data(0)
 
-        trigger = array("d", trigger)  # List to Array
-        monitor = array("d", monitor)  # list to Array
+            # Get the monitor data from the TSL
+            monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
 
         # Search place of add in
         for item in self.dut_monitor:
@@ -786,13 +794,14 @@ class StsProcess(STSData):
             # Add Monitor data for STSProcess Class with STSDataStruct
             logger.info("Adding meas monitor data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
                         item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount)
-            errorcode = self._ilsts.Add_Meas_MonitorData(trigger, monitor, item)
-            if errorcode != 0:
+            error_code = self._ilsts.Add_Meas_MonitorData(trigger_data, monitor_data, item)
+            if error_code != 0:
                 logger.error("Error while getting measurement data of: MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
                              item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount,
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
-        return errorcode
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        return error_code
 
     def get_dut_data(self) -> None:
         """
