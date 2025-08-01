@@ -456,6 +456,50 @@ class StsProcess(STSData):
 
         return error_code
 
+    def _call_measurement_data_for_rescaling(self):
+        logger.info("Calling meas data for rescaling of mpm_range: ")
+        error_code = self._ilsts.Cal_MeasData_Rescaling()
+        if error_code != 0:
+            logger.error("Error while performing DUT measurement, ",
+                         str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+    def _call_il_data_for_merge(self):
+        logger.info("Calling IL merge")
+        error_code = self._ilsts.Cal_IL_Merge(Module_Type.MPM_211)  # Range data merge
+        if error_code != 0:
+            logger.error("Error while performing DUT measurement, ",
+                         str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+    def _get_il_data(self):
+        # This portion of the code just to get wavelength
+        # and IL data at the end of the scan
+        self.wavelength_table = []
+        self.il_data = []
+        self.il_data_array = []
+
+        # Get rescaling wavelength table
+        for wav in list(self._ilsts.Get_Target_Wavelength_Table(None)[1]):
+            self.wavelength_table.append(wav)
+
+        # Pull out IL data of after merge
+        for item in self.merge_data:
+            logger.info("Getting IL merge data of: MPM%d Slot%d Ch%d SOP%d",
+                        item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.SOP)
+            error_code, self.il_data = self._ilsts.Get_IL_Merge_Data(None, item)
+            if error_code != 0:
+                logger.error("Error while performing DUT measurement of: MPM%d Slot%d Ch%d SOP%d, ",
+                             item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.SOP,
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+            self.il_data = array("d", self.il_data)  # List to Array
+            self.il_data_array.append(self.il_data)
+        self.il = []
+        for i in self.il_data_array[0]:
+            self.il.append(i)
+
     # endregion
 
     def set_parameters(self) -> None:
@@ -700,64 +744,32 @@ class StsProcess(STSData):
             STSProcessError: If DUT measurement operation fails.
         """
         logger.info("STS measurement operation")
+
         sweep_count = 1
         for mpm_range in self.dynamic_range:
+            # Set the MPM dynamic dynamic_range
             self._mpm.set_range(mpm_range)
+
+            # Base sweep process
             self._base_sweep_process()
-            error_string = self._get_measurement_data(sweep_count)  # Get DUT data
-            # print(error_string)
+
+            # Get the measurement scan data
+            _ = self._get_measurement_data(sweep_count)
+
             sweep_count += 1
 
-        logger.info("Calling meas data for rescaling of mpm_range: ")
-        errorcode = self._ilsts.Cal_MeasData_Rescaling()  # Rescaling
-        if errorcode != 0:
-            logger.error("Error while performing DUT measurement, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+        # Call the measurement data for rescaling
+        self._call_measurement_data_for_rescaling()
 
-        logger.info("Calling IL merge")
-        errorcode = self._ilsts.Cal_IL_Merge(Module_Type.MPM_211)  # Range data merge
-        if errorcode != 0:
-            logger.error("Error while performing DUT measurement, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+        # Call the IL merge data
+        self._call_il_data_for_merge()
 
-        self._tsl.stop_sweep()  # TSL stop
+        # TSL Sweep stop
+        self._tsl.stop_sweep()
 
-        #####################################################################
+        # Get the IL data
+        self._get_il_data()
 
-        # This portion of the code just to get wavelengths and IL data at the end of the scan
-        # It can be commented out if needed
-        self.wavelength_table = []
-        self.il_data = []
-        self.il_data_array = []
-
-        # Get rescaling wavelength table
-        for wav in list(self._ilsts.Get_Target_Wavelength_Table(None)[1]):
-            self.wavelength_table.append(wav)
-        if errorcode != 0:
-            logger.error("Error while performing DUT measurement, ",
-                         str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
-
-        for item in self.merge_data:
-            # Pull out IL data of after merge
-            logger.info("Getting IL merge data of: MPM%d Slot%d Ch%d SOP%d",
-                        item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.SOP)
-            errorcode, self.il_data = self._ilsts.Get_IL_Merge_Data(None, item)
-            if errorcode != 0:
-                logger.error("Error while performing DUT measurement of: MPM%d Slot%d Ch%d SOP%d, ",
-                             item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.SOP,
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
-
-            self.il_data = array("d", self.il_data)  # List to Array
-            self.il_data_array.append(self.il_data)
-        self.il = []
-        for i in self.il_data_array[0]:
-            self.il.append(i)
-
-        #####################################################################
         logger.info("STS measurement operation done.")
 
     def get_wavelength_table(self, data_struct_item: STSDataStruct, trigger_length: int) -> None:
