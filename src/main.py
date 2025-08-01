@@ -257,9 +257,6 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         else:
             ilsts.set_selected_ranges(previous_param_data)
 
-        # Create the IL STS data structure
-        ilsts.set_sts_data_struct()
-
         # Set Sweep parameters to MPM and DAQ
         ilsts.set_parameters()
 

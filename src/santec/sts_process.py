@@ -176,6 +176,70 @@ class StsProcess(STSData):
             i += 2
         logger.info("Special channels set.")
 
+    def _set_sts_data_struct(self) -> None:
+        """ Create the data structures, which includes the potentially savable reference data. """
+        logger.info("Set STS data struct")
+        self._clear_sts_data_struct()  # Clears all the sts data struct lists.
+        counter = 1
+
+        # Configure STSDatastruct for each measurement
+        logger.info("Configure STSDatastruct for each measurement")
+        for m_range in self.selected_ranges:
+            for ch in self.selected_chans:
+                data_st = STSDataStruct()
+                data_st.MPMNumber = 0
+                data_st.SlotNumber = int(ch[0])  # slot number
+                data_st.ChannelNumber = int(ch[1])  # channel number
+                data_st.RangeNumber = m_range  # array of MPM ranges
+                data_st.SweepCount = counter
+                data_st.SOP = 0
+                self.dut_data.append(data_st)
+
+                range_index = self.selected_ranges.index(m_range)
+                channel_index = self.selected_chans.index(ch)
+
+                # measurement monitor data need only 1 channel for each dynamic_range.
+                if channel_index == 0:
+                    self.dut_monitor.append(data_st)
+                    self.dynamic_range.append(m_range)
+
+                # reference data need only 1 dynamic_range for each ch
+                if range_index == 0:
+                    self.ref_data.append(data_st)
+                    self.ref_monitor.append(data_st)
+            counter += 1
+
+        # Configure STSDataStruct for merge
+        logger.info("Configure STSDataStruct for merge")
+        for ch in self.selected_chans:
+            merge_sts = STSDataStructForMerge()
+            merge_sts.MPMnumber = 0
+            merge_sts.SlotNumber = int(ch[0])  # slot number
+            merge_sts.ChannelNumber = int(ch[1])  # channel number
+            merge_sts.SOP = 0
+            self.merge_data.append(merge_sts)
+
+        logger.info("STS data struct set.")
+
+    def _clear_sts_data_struct(self) -> None:
+        """
+        Clears all the sts data struct lists.
+        Lists cleared are:
+            dut_monitor
+            dut_data
+            merge_data
+            ref_monitor
+            ref_data
+            dynamic_range
+        """
+        logger.info("Clear all the sts data struct lists.")
+        self.dut_monitor.clear()
+        self.dut_data.clear()
+        self.merge_data.clear()
+        self.ref_monitor.clear()
+        self.ref_data.clear()
+        self.dynamic_range.clear()
+
     # endregion
 
     def set_parameters(self) -> None:
@@ -189,6 +253,9 @@ class StsProcess(STSData):
                         If setting STS sweep parameters fails.
         """
         logger.info("Setting STS params")
+
+        # Create the IL STS data structure
+        self._set_sts_data_struct()
 
         # Logging parameters for MPM
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
@@ -317,69 +384,6 @@ class StsProcess(STSData):
         # Convert the string ranges to ints, because that is what the DLL is expecting.
         self.selected_ranges = [int(i) for i in self.selected_ranges]
         logger.info(f"Selected ranges: {self.selected_ranges}")
-
-    def set_sts_data_struct(self) -> None:
-        """ Create the data structures, which includes the potentially savable reference data. """
-        logger.info("Set STS data struct")
-        self.clear_sts_data_struct()  # Clears all the sts data struct lists.
-        counter = 1
-
-        # Configure STSDatastruct for each measurement
-        logger.info("Configure STSDatastruct for each measurement")
-        for m_range in self.selected_ranges:
-            for ch in self.selected_chans:
-                data_st = STSDataStruct()
-                data_st.MPMNumber = 0
-                data_st.SlotNumber = int(ch[0])  # slot number
-                data_st.ChannelNumber = int(ch[1])  # channel number
-                data_st.RangeNumber = m_range  # array of MPM ranges
-                data_st.SweepCount = counter
-                data_st.SOP = 0
-                self.dut_data.append(data_st)
-
-                range_index = self.selected_ranges.index(m_range)
-                channel_index = self.selected_chans.index(ch)
-
-                # measurement monitor data need only 1 channel for each dynamic_range.
-                if channel_index == 0:
-                    self.dut_monitor.append(data_st)
-                    self.dynamic_range.append(m_range)
-
-                # reference data need only 1 dynamic_range for each ch
-                if range_index == 0:
-                    self.ref_data.append(data_st)
-                    self.ref_monitor.append(data_st)
-            counter += 1
-
-        # Configure STSDataStruct for merge
-        logger.info("Configure STSDataStruct for merge")
-        for ch in self.selected_chans:
-            merge_sts = STSDataStructForMerge()
-            merge_sts.MPMnumber = 0
-            merge_sts.SlotNumber = int(ch[0])  # slot number
-            merge_sts.ChannelNumber = int(ch[1])  # channel number
-            merge_sts.SOP = 0
-            self.merge_data.append(merge_sts)
-        logger.info("STS data struct set.")
-
-    def clear_sts_data_struct(self) -> None:
-        """
-        Clears all the sts data struct lists.
-        Lists cleared are:
-            dut_monitor
-            dut_data
-            merge_data
-            ref_monitor
-            ref_data
-            dynamic_range
-        """
-        logger.info("Clear all the sts data struct lists.")
-        self.dut_monitor.clear()
-        self.dut_data.clear()
-        self.merge_data.clear()
-        self.ref_monitor.clear()
-        self.ref_data.clear()
-        self.dynamic_range.clear()
 
     def sts_reference(self) -> None:
         """ Take reference data for each module/channel selected by the user. """
