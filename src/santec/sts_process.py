@@ -813,26 +813,26 @@ class StsProcess(STSData):
             length of the dut power array, and the dut monitor array are not equal.
         """
         logger.info("STS get dut data")
+
         # After rescaling is done, get the raw dut data
         for data_struct_item in self.dut_data:
             logger.info("Getting meas raw data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
                         data_struct_item.MPMNumber, data_struct_item.SlotNumber, data_struct_item.ChannelNumber,
                         data_struct_item.RangeNumber, data_struct_item.SweepCount)
-            errorcode, rescaled_dut_pwr, rescaled_dut_mon = self._ilsts.Get_Meas_RawData(data_struct_item,
-                                                                                         None, None)
-            if errorcode != 0:
+            error_code, rescaled_dut_pwr, rescaled_dut_mon = self._ilsts.Get_Meas_RawData(data_struct_item, None, None)
+            if error_code != 0:
                 logger.error("Error while getting meas raw data of: , MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
                              data_struct_item.MPMNumber, data_struct_item.SlotNumber, data_struct_item.ChannelNumber,
                              data_struct_item.RangeNumber, data_struct_item.SweepCount,
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
             logger.info("Getting target wavelength table")
-            errorcode, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
-            if errorcode != 0:
+            error_code, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
+            if error_code != 0:
                 logger.error("Error while getting the target wavelength table, ",
-                             str(errorcode) + ": " + sts_process_error_strings(errorcode))
-                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
             if len(wavelength_array) == 0 or len(wavelength_array) != len(rescaled_dut_pwr) or len(
                     wavelength_array) != len(rescaled_dut_mon):
@@ -846,18 +846,17 @@ class StsProcess(STSData):
                         len(wavelength_array), len(rescaled_dut_pwr), len(rescaled_dut_mon))
                 )
 
-            # print("Channel: {}, Range: {} ".format(data_struct_item.ChannelNumber, data_struct_item.RangeNumber))
             dut_object = {
                 "MPMNumber": data_struct_item.MPMNumber,
                 "SlotNumber": data_struct_item.SlotNumber,
                 "ChannelNumber": data_struct_item.ChannelNumber,
                 "RangeNumber": data_struct_item.RangeNumber,
                 "rescaled_wavelength": list(array('d', wavelength_array)),
-                # all wavelengths, including triggers in between.
                 "rescaled_dut_monitor": list(array('d', rescaled_dut_mon)),  # rescaled monitor data
                 "rescaled_dut_power": list(array('d', rescaled_dut_pwr)),  # rescaled dut power
             }
             self.dut_data_array.append(dut_object)
+
             logger.info("STS get dut data done.")
 
     def disconnect_instruments(self) -> None:
@@ -868,12 +867,14 @@ class StsProcess(STSData):
             Exception: If disconnecting instruments fails.
         """
         logger.info("Disconnect instrument connections.")
+
         try:
             self._tsl.disconnect()
             self._mpm.disconnect()
-            self._spu.disconnect()
+
         except Exception as e:
             logger.error("Error while disconnecting instruments, %s", e)
             raise Exception("Error while disconnecting instruments, %s", e)
+
         logger.info("Disconnected instrument connections.")
         
