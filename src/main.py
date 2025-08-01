@@ -275,13 +275,14 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         while ans in "yY":
             print("\nDUT measurement")
             while True:
-                reps = input("Input DUT scan repeat count (greater than 0): ")
-                if reps.isnumeric() and int(reps) > 0:
+                reps = int(input("Input DUT scan repeat count (greater than 0): "))
+                if reps > 0:
                     break
                 print("Invalid repeat count, enter a positive number.\n")
             input("Connect the DUT and press ENTER")
-            for _ in range(int(reps)):
-                print("\nScan {} of {}...".format(str(_ + 1), reps))
+            for i in range(reps):
+                scan_index = i + 1
+                print("\nScan {} of {}...".format(str(scan_index), reps))
 
                 # IL STS measurement scan
                 ilsts.sts_measurement()
@@ -290,8 +291,8 @@ def wavelength_dependent_loss(tsl, mpm, daq):
                 if user_map_display == "y":
                     plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
 
-                time.sleep(0.5)
-
+                if reps > 1 and scan_index < reps:
+                    input(f"\nPress ENTER to continue to Scan {scan_index + 1}...")
             ilsts.get_dut_data()  # Get and store DUT scan data
 
             ans = input("\nRedo Scan ? (y/n): ")
