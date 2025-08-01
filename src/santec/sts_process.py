@@ -286,6 +286,176 @@ class StsProcess(STSData):
         logger.info("STS base sweep process done.")
         return None
 
+    def _get_reference_data(self, data_struct_item: STSDataStruct) -> None:
+        """
+        Get the reference data by using the parameter data structure, as well as the trigger points, and monitor data.
+
+        Parameters:
+            data_struct_item (STSDataStruct): Contains all information of tested module/channel.
+
+        Raises:
+            Exception: If power monitor/MPM data were not added to the data structure,
+                    Issues with the recalling process,
+                    Mismatch between the length of the power monitor data and the length of the MPM data.
+            STSProcessError: If getting the reference data fails.
+        """
+        logger.info("STS get reference data")
+        # Get MPM logging data
+        log_data = self._mpm.get_each_channel_log_data(data_struct_item.SlotNumber, data_struct_item.ChannelNumber)
+
+        # Add MPM Logging data for STS Process Class
+        self.log_data = array('d', log_data)  # List to Array
+        logger.info(
+            f"Reference log details: MPMNumber={data_struct_item.MPMNumber}, SlotNumber={data_struct_item.SlotNumber}"
+            f"ChannelNumber={data_struct_item.ChannelNumber}, RangeNumber={data_struct_item.RangeNumber},"
+            f"Log data length={len(log_data)}")
+
+        logger.info("Adding ref mpm channel data.")
+        error_code = self._ilsts.Add_Ref_MPMData_CH(log_data, data_struct_item)
+        if error_code != 0:
+            logger.info("Error while getting ref data, ",
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        # Get trigger and monitor data
+        if self._spu:
+            trigger, monitor = self._spu.get_sampling_raw_data()
+        else:
+            # Get the trigger data from the MPM
+            trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
+
+            # Get the monitor data from the TSL
+            monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
+
+        # Add Monitor data for STS Process Class
+        logger.info("Adding ref monitor data.")
+        error_code = self._ilsts.Add_Ref_MonitorData(trigger_data, monitor_data, data_struct_item)
+        if error_code != 0:
+            logger.info("Error while getting ref data, ",
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        # Rescaling for reference data.
+        # We must rescale before we get the reference data.
+        # Otherwise, we end up with way too many monitor and logging points.
+        logger.info("Calling ref data for rescaling.")
+        error_code = self._ilsts.Cal_RefData_Rescaling()
+        if error_code != 0:
+            logger.info("Error while getting ref data, ",
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        # After rescaling is done, get the raw reference data.
+        logger.info("Getting ref raw data.")
+        error_code, rescaled_ref_pwr, rescaled_ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)
+        logger.info(f"Rescaled ref raw power: {len(rescaled_ref_pwr)}, "
+                    f"Rescaled red monitor: {len(rescaled_ref_mon)}")
+
+        if error_code != 0:
+            logger.info("Error while getting ref data, ",
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        logger.info("Getting target wavelength table.")
+        error_code, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
+        logger.info(f"Wavelength table length: {len(wavelength_array)}")
+        if error_code != 0:
+            logger.info("Error while getting ref data, ",
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        if (len(wavelength_array) == 0 or len(wavelength_array) != len(rescaled_ref_pwr) or len(wavelength_array)
+                != len(rescaled_ref_mon)):
+            logger.info(
+                "The length of the wavelength array is {}, the length of the reference power array is {}, "
+                "and the length of the reference monitor is {}. They must all be the same length.".format(
+                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
+            raise Exception(
+                "The length of the wavelength array is {}, the length of the reference power array is {}, "
+                "and the length of the reference monitor is {}. They must all be the same length.".format(
+                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
+
+        # Save all desired reference data into the reference array of this StsProcess class.
+        ref_object = {
+            "MPMNumber": data_struct_item.MPMNumber,
+            "SlotNumber": data_struct_item.SlotNumber,
+            "ChannelNumber": data_struct_item.ChannelNumber,
+            "log_data": list(self.log_data),
+            "trigger": list(array('d', trigger_data)),
+            "monitor": list(array('d', monitor_data)),
+            "rescaled_wavelength": list(array('d', wavelength_array)),
+            "rescaled_monitor": list(array('d', rescaled_ref_mon)),  # rescaled monitor data
+            "rescaled_reference_power": list(array('d', rescaled_ref_pwr)),  # rescaled reference power
+        }
+        self.reference_data_array.append(ref_object)
+
+        return None
+
+    def _get_measurement_data(self, sweep_count: int) -> int:
+        """
+        Gets logged data during DUT measurement.
+
+        Parameters:
+            sweep count (int): The number of sweep process operations.
+
+        Raises:
+            Exception: If power monitor/MPM data couldn't be added to the data structure.
+            STSProcessError: If getting the measurement data fails.
+        """
+        logger.info("STS get measurement data")
+
+        error_code = 0
+        for item in self.dut_data:
+            if item.SweepCount != sweep_count:
+                continue
+
+            # Get MPM logging data
+            log_data = self._mpm.get_each_channel_log_data(item.SlotNumber, item.ChannelNumber)
+            log_data = array("d", log_data)  # List to Array
+            logger.info(f"Measurement log details: MPMNumber={item.MPMNumber}, SlotNumber={item.SlotNumber}"
+                        f"ChannelNumber={item.ChannelNumber}, RangeNumber={item.RangeNumber},"
+                        f"Log data length={len(log_data)}")
+
+            # Add MPM Logging data for STSProcess Class with STSDatastruct
+            logger.info("Adding meas mpm channel data")
+            error_code = self._ilsts.Add_Meas_MPMData_CH(log_data, item)
+            if error_code != 0:
+                logger.error("Error while getting measurement data, ",
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        # Get trigger and monitor data
+        if self._spu:
+            trigger, monitor = self._spu.get_sampling_raw_data()
+        else:
+            # Get the trigger data from the MPM
+            trigger = self._mpm.get_trigger_data(0)
+
+            # Get the monitor data from the TSL
+            monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
+
+        # Search place of add in
+        for item in self.dut_monitor:
+            if item.SweepCount != sweep_count:
+                continue
+            # Add Monitor data for STSProcess Class with STSDataStruct
+            logger.info("Adding meas monitor data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
+                        item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount)
+            error_code = self._ilsts.Add_Meas_MonitorData(trigger_data, monitor_data, item)
+            if error_code != 0:
+                logger.error("Error while getting measurement data of: MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
+                             item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount,
+                             str(error_code) + ": " + sts_process_error_strings(error_code))
+                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
+
+        return error_code
+
     # endregion
 
     def set_parameters(self) -> None:
@@ -590,114 +760,6 @@ class StsProcess(STSData):
         #####################################################################
         logger.info("STS measurement operation done.")
 
-    def _get_reference_data(self, data_struct_item: STSDataStruct) -> None:
-        """
-        Get the reference data by using the parameter data structure, as well as the trigger points, and monitor data.
-
-        Parameters:
-            data_struct_item (STSDataStruct): Contains all information of tested module/channel.
-
-        Raises:
-            Exception: If power monitor/MPM data were not added to the data structure,
-                    Issues with the recalling process,
-                    Mismatch between the length of the power monitor data and the length of the MPM data.
-            STSProcessError: If getting the reference data fails.
-        """
-        logger.info("STS get reference data")
-        # Get MPM logging data
-        log_data = self._mpm.get_each_channel_log_data(data_struct_item.SlotNumber, data_struct_item.ChannelNumber)
-
-        # Add MPM Logging data for STS Process Class
-        self.log_data = array('d', log_data)  # List to Array
-        logger.info(
-            f"Reference log details: MPMNumber={data_struct_item.MPMNumber}, SlotNumber={data_struct_item.SlotNumber}"
-            f"ChannelNumber={data_struct_item.ChannelNumber}, RangeNumber={data_struct_item.RangeNumber},"
-            f"Log data length={len(log_data)}")
-
-        logger.info("Adding ref mpm channel data.")
-        error_code = self._ilsts.Add_Ref_MPMData_CH(log_data, data_struct_item)
-        if error_code != 0:
-            logger.info("Error while getting ref data, ",
-                        str(error_code) + ": " + sts_process_error_strings(error_code))
-            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        # Get trigger and monitor data
-        if self._spu:
-            trigger, monitor = self._spu.get_sampling_raw_data()
-        else:
-            # Get the trigger data from the MPM
-            trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
-
-            # Get the monitor data from the TSL
-            monitor = self._tsl.get_power_logging_data()
-
-        trigger_data = array("d", trigger)  # List to Array
-        monitor_data = array("d", monitor)  # list to Array
-
-        # Add Monitor data for STS Process Class
-        logger.info("Adding ref monitor data.")
-        error_code = self._ilsts.Add_Ref_MonitorData(trigger_data, monitor_data, data_struct_item)
-        if error_code != 0:
-            logger.info("Error while getting ref data, ",
-                        str(error_code) + ": " + sts_process_error_strings(error_code))
-            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        # Rescaling for reference data.
-        # We must rescale before we get the reference data.
-        # Otherwise, we end up with way too many monitor and logging points.
-        logger.info("Calling ref data for rescaling.")
-        error_code = self._ilsts.Cal_RefData_Rescaling()
-        if error_code != 0:
-            logger.info("Error while getting ref data, ",
-                        str(error_code) + ": " + sts_process_error_strings(error_code))
-            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        # After rescaling is done, get the raw reference data.
-        logger.info("Getting ref raw data.")
-        error_code, rescaled_ref_pwr, rescaled_ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)
-        logger.info(f"Rescaled ref raw power: {len(rescaled_ref_pwr)}, "
-                    f"Rescaled red monitor: {len(rescaled_ref_mon)}")
-
-        if error_code != 0:
-            logger.info("Error while getting ref data, ",
-                        str(error_code) + ": " + sts_process_error_strings(error_code))
-            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        logger.info("Getting target wavelength table.")
-        error_code, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
-        logger.info(f"Wavelength table length: {len(wavelength_array)}")
-        if error_code != 0:
-            logger.info("Error while getting ref data, ",
-                        str(error_code) + ": " + sts_process_error_strings(error_code))
-            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        if (len(wavelength_array) == 0 or len(wavelength_array) != len(rescaled_ref_pwr) or len(wavelength_array)
-                != len(rescaled_ref_mon)):
-            logger.info(
-                "The length of the wavelength array is {}, the length of the reference power array is {}, "
-                "and the length of the reference monitor is {}. They must all be the same length.".format(
-                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
-            raise Exception(
-                "The length of the wavelength array is {}, the length of the reference power array is {}, "
-                "and the length of the reference monitor is {}. They must all be the same length.".format(
-                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
-
-        # Save all desired reference data into the reference array of this StsProcess class.
-        ref_object = {
-            "MPMNumber": data_struct_item.MPMNumber,
-            "SlotNumber": data_struct_item.SlotNumber,
-            "ChannelNumber": data_struct_item.ChannelNumber,
-            "log_data": list(self.log_data),
-            "trigger": list(array('d', trigger_data)),
-            "monitor": list(array('d', monitor_data)),
-            "rescaled_wavelength": list(array('d', wavelength_array)),
-            "rescaled_monitor": list(array('d', rescaled_ref_mon)),  # rescaled monitor data
-            "rescaled_reference_power": list(array('d', rescaled_ref_pwr)),  # rescaled reference power
-        }
-        self.reference_data_array.append(ref_object)
-
-        return None
-
     def get_wavelength_table(self, data_struct_item: STSDataStruct, trigger_length: int) -> None:
         """
         Gets the list of wavelengths from the most recent scan.
@@ -740,68 +802,6 @@ class StsProcess(STSData):
                 "They should have been the same. ".format(len(wavelength_table), trigger_length))
         logger.info("Wavelength table length: %d", len(wavelength_table))
         return wavelength_table
-
-    def _get_measurement_data(self, sweep_count: int) -> int:
-        """
-        Gets logged data during DUT measurement.
-
-        Parameters:
-            sweep count (int): The number of sweep process operations.
-
-        Raises:
-            Exception: If power monitor/MPM data couldn't be added to the data structure.
-            STSProcessError: If getting the measurement data fails.
-        """
-        logger.info("STS get measurement data")
-
-        error_code = 0
-        for item in self.dut_data:
-            if item.SweepCount != sweep_count:
-                continue
-
-            # Get MPM logging data
-            log_data = self._mpm.get_each_channel_log_data(item.SlotNumber, item.ChannelNumber)
-            log_data = array("d", log_data)  # List to Array
-            logger.info(f"Measurement log details: MPMNumber={item.MPMNumber}, SlotNumber={item.SlotNumber}"
-                        f"ChannelNumber={item.ChannelNumber}, RangeNumber={item.RangeNumber},"
-                        f"Log data length={len(log_data)}")
-
-            # Add MPM Logging data for STSProcess Class with STSDatastruct
-            logger.info("Adding meas mpm channel data")
-            error_code = self._ilsts.Add_Meas_MPMData_CH(log_data, item)
-            if error_code != 0:
-                logger.error("Error while getting measurement data, ",
-                             str(error_code) + ": " + sts_process_error_strings(error_code))
-                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        # Get trigger and monitor data
-        if self._spu:
-            trigger, monitor = self._spu.get_sampling_raw_data()
-        else:
-            # Get the trigger data from the MPM
-            trigger = self._mpm.get_trigger_data(0)
-
-            # Get the monitor data from the TSL
-            monitor = self._tsl.get_power_logging_data()
-
-        trigger_data = array("d", trigger)  # List to Array
-        monitor_data = array("d", monitor)  # list to Array
-
-        # Search place of add in
-        for item in self.dut_monitor:
-            if item.SweepCount != sweep_count:
-                continue
-            # Add Monitor data for STSProcess Class with STSDataStruct
-            logger.info("Adding meas monitor data of: MPM%d Slot%d Ch%d Range%d SweepNo%d",
-                        item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount)
-            error_code = self._ilsts.Add_Meas_MonitorData(trigger_data, monitor_data, item)
-            if error_code != 0:
-                logger.error("Error while getting measurement data of: MPM%d Slot%d Ch%d Range%d SweepNo%d, ",
-                             item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.RangeNumber, item.SweepCount,
-                             str(error_code) + ": " + sts_process_error_strings(error_code))
-                raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
-
-        return error_code
 
     def get_dut_data(self) -> None:
         """
