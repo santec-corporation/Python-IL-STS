@@ -46,13 +46,13 @@ class GetAddress:
 
     def __init__(self):
         self.configuration: str = ""
+        self.instruments: list = []
         self.__cached_tsl_address = None
         self.__cached_mpm_address = None
-        self.__cached_daq_address: str = ""
+        self.__cached_daq_address = None
         self.is_disposed: bool = False
 
-    def initialize_instruments(self, connection_configuration: str = "GPIB",
-                               is_tsl_mpm: bool = True, is_daq: bool = True) -> None:
+    def initialize_instruments(self, connection_configuration: str = "GPIB") -> None:
         """
         Detects and displays all the Santec GPIB and USB instrument connections,
         as well as the DAQ devices.
@@ -60,12 +60,6 @@ class GetAddress:
         Parameters:
             connection_configuration (str):
             The connection configuration or communication mode of the instruments.
-
-            is_tsl_mpm: True if initializing TSL and MPM connections via GPIB / USB,
-                    else False if using LAN.
-                    Default value: True.
-            is_daq: True if initializing the DAQ, else False.
-                    Default value: True.
 
         Raises:
             RuntimeError: If no TSL or MPM instruments are found.
@@ -76,20 +70,15 @@ class GetAddress:
             raise RuntimeError(f"Invalid connection configuration {connection_configuration}.")
         self.configuration = connection_configuration
 
-        instruments = []
-        if is_tsl_mpm:
-            if self.__cached_tsl_address is None and self.__cached_mpm_address is None:
-                instruments = self.detect_instruments()
+        if self.__cached_tsl_address is None and self.__cached_mpm_address is None:
+            self.instruments = self.detect_instruments()
 
-                if not instruments:
-                    logger.critical("No TSL or MPM instruments were found.")
-                    raise RuntimeError("No TSL or MPM instruments were found.")
+            if not self.instruments:
+                logger.critical("No TSL or MPM instruments were found.")
+                raise RuntimeError("No TSL or MPM instruments were found.")
 
-                self.select_instruments(instruments)
+            self.select_instruments(self.instruments)
 
-        if is_daq:
-            daq_device_address = self.select_daq_device(instruments)
-            self.__cached_daq_address = daq_device_address
 
     def detect_instruments(self) -> list:
         """
@@ -279,15 +268,20 @@ class GetAddress:
             self.initialize_instruments()
         return self.__cached_mpm_address
 
-    def get_daq_address(self) -> str:
+    def get_daq_address(self) -> str | None:
         """
         Returns:
             The user selected DAQ device ip_address.
             Returns empty string if initialize_instrument_addresses was not initialized.
         """
-        if self.__cached_daq_address is None:
-            self.initialize_instruments()
-        return self.__cached_daq_address
+        devices = []
+        daq_device_address = self.select_daq_device(devices)
+        self.instruments.append(devices)
+        self.__cached_daq_address = daq_device_address
+
+        if self.__cached_daq_address:
+            return self.__cached_daq_address
+        return None
 
     def dispose(self) -> None:
         """
