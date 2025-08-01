@@ -126,14 +126,14 @@ class StsProcess(STSData):
 
     def _rescaling_settings(self):
         logger.info("STS rescaling settings")
-        if self._spu is None:
-            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_TSLMonitor,
+        if self._spu:
+            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
                                                           self._mpm.get_averaging_time(),
                                                           True)
         else:
-            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
-                                                      self._mpm.get_averaging_time(),
-                                                      True)
+            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_TSLMonitor,
+                                                          self._mpm.get_averaging_time(),
+                                                          True)
 
         if sts_error != 0:
             logger.error("Error while rescaling setting, ",
@@ -310,7 +310,7 @@ class StsProcess(STSData):
                                          self._tsl.sweep_speed)
 
         # Logging parameter for SPU(DAQ)
-        if self._spu is not None:
+        if self._spu:
             self._spu.set_logging_parameters(self._tsl.start_wavelength,
                                              self._tsl.stop_wavelength,
                                              self._tsl.sweep_speed,
@@ -457,7 +457,7 @@ class StsProcess(STSData):
             self._base_sweep_process()
 
             # Get sampling data & Add in STSProcess Class
-            self.get_reference_data(i)
+            self._get_reference_data(i)
 
             # TSL Sweep stop
             self._tsl.stop_sweep()
@@ -590,7 +590,7 @@ class StsProcess(STSData):
         #####################################################################
         logger.info("STS measurement operation done.")
 
-    def get_reference_data(self, data_struct_item: STSDataStruct) -> None:
+    def _get_reference_data(self, data_struct_item: STSDataStruct) -> None:
         """
         Get the reference data by using the parameter data structure, as well as the trigger points, and monitor data.
 
@@ -615,84 +615,90 @@ class StsProcess(STSData):
             f"Log data length={len(log_data)}")
 
         logger.info("Adding ref mpm channel data.")
-        errorcode = self._ilsts.Add_Ref_MPMData_CH(log_data, data_struct_item)
-        if errorcode != 0:
+        error_code = self._ilsts.Add_Ref_MPMData_CH(log_data, data_struct_item)
+        if error_code != 0:
             logger.info("Error while getting ref data, ",
-                        str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         # Get SPU sampling data
-        trigger, monitor = self._spu.get_sampling_raw_data()
+        if self._spu:
+            trigger, monitor = self._spu.get_sampling_raw_data()
+        else:
+            # Get the trigger data from the MPM
+            trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
+
+            # Get the monitor data from the TSL
+            monitor = self._tsl.get_power_logging_data()
+
+        trigger_data = array("d", trigger)  # List to Array
+        monitor_data = array("d", monitor)  # list to Array
 
         # Add Monitor data for STS Process Class
         logger.info("Adding ref monitor data.")
-        errorcode = self._ilsts.Add_Ref_MonitorData(trigger, monitor, data_struct_item)
-        if errorcode != 0:
+        error_code = self._ilsts.Add_Ref_MonitorData(trigger_data, monitor_data, data_struct_item)
+        if error_code != 0:
             logger.info("Error while getting ref data, ",
-                        str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                        str(error_code) + ": " + sts_process_error_strings(error_code))
+            raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
-        # Rescaling for reference data.
-        # We must rescale before we get the reference data.
-        # Otherwise, we end up with way too many monitor and logging points.
-        logger.info("Calling ref data for rescaling.")
-        errorcode = self._ilsts.Cal_RefData_Rescaling()
-        if errorcode != 0:
-            logger.info("Error while getting ref data, ",
-                        str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+            # Rescaling for reference data.
+            # We must rescale before we get the reference data.
+            # Otherwise, we end up with way too many monitor and logging points.
+            logger.info("Calling ref data for rescaling.")
+            errorcode = self._ilsts.Cal_RefData_Rescaling()
+            if errorcode != 0:
+                logger.info("Error while getting ref data, ",
+                            str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        # After rescaling is done, get the raw reference data.
-        logger.info("Getting ref raw data.")
-        errorcode, rescaled_ref_pwr, rescaled_ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)
-        logger.info(f"Rescaled ref raw power: {len(rescaled_ref_pwr)}, "
-                    f"Rescaled red monitor: {len(rescaled_ref_mon)}")
+            # After rescaling is done, get the raw reference data.
+            logger.info("Getting ref raw data.")
+            errorcode, rescaled_ref_pwr, rescaled_ref_mon = self._ilsts.Get_Ref_RawData(data_struct_item, None, None)
+            logger.info(f"Rescaled ref raw power: {len(rescaled_ref_pwr)}, "
+                        f"Rescaled red monitor: {len(rescaled_ref_mon)}")
 
-        if errorcode != 0:
-            logger.info("Error while getting ref data, ",
-                        str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+            if errorcode != 0:
+                logger.info("Error while getting ref data, ",
+                            str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        logger.info("Getting target wavelength table.")
-        errorcode, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
-        logger.info(f"Wavelength table length: {len(wavelength_array)}")
-        if errorcode != 0:
-            logger.info("Error while getting ref data, ",
-                        str(errorcode) + ": " + sts_process_error_strings(errorcode))
-            raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
+            logger.info("Getting target wavelength table.")
+            errorcode, wavelength_array = self._ilsts.Get_Target_Wavelength_Table(None)
+            logger.info(f"Wavelength table length: {len(wavelength_array)}")
+            if errorcode != 0:
+                logger.info("Error while getting ref data, ",
+                            str(errorcode) + ": " + sts_process_error_strings(errorcode))
+                raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
-        if (len(wavelength_array) == 0 or len(wavelength_array) != len(rescaled_ref_pwr) or len(wavelength_array)
-                != len(rescaled_ref_mon)):
-            logger.info(
-                "The length of the wavelength array is {}, the length of the reference power array is {}, "
-                "and the length of the reference monitor is {}. They must all be the same length.".format(
-                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
-            raise Exception(
-                "The length of the wavelength array is {}, the length of the reference power array is {}, "
-                "and the length of the reference monitor is {}. They must all be the same length.".format(
-                    len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
+            if (len(wavelength_array) == 0 or len(wavelength_array) != len(rescaled_ref_pwr) or len(wavelength_array)
+                    != len(rescaled_ref_mon)):
+                logger.info(
+                    "The length of the wavelength array is {}, the length of the reference power array is {}, "
+                    "and the length of the reference monitor is {}. They must all be the same length.".format(
+                        len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
+                raise Exception(
+                    "The length of the wavelength array is {}, the length of the reference power array is {}, "
+                    "and the length of the reference monitor is {}. They must all be the same length.".format(
+                        len(wavelength_array), len(rescaled_ref_pwr), len(rescaled_ref_mon)))
 
-        # Save all desired reference data into the reference array of this StsProcess class.
-        ref_object = {
-            "MPMNumber": data_struct_item.MPMNumber,
-            "SlotNumber": data_struct_item.SlotNumber,
-            "ChannelNumber": data_struct_item.ChannelNumber,
-            "log_data": list(self.log_data),
-            # unscaled log data is required if we want to load the reference data later.
-            "trigger": list(array('d', trigger)),
-            # motor positions that correspond to wavelengths. required if we want to load the reference data later.
-            "monitor": list(array('d', monitor)),
-            # unscaled monitor data is required if we want to load the reference data later.
-            "rescaled_monitor": list(array('d', rescaled_ref_mon)),  # rescaled monitor data
-            "rescaled_wavelength": list(array('d', wavelength_array)),  # all wavelengths, including triggers inbetween.
-            "rescaled_reference_power": list(array('d', rescaled_ref_pwr)),  # rescaled reference power
-        }
-        self.reference_data_array.append(ref_object)
-        return None
+            # Save all desired reference data into the reference array of this StsProcess class.
+            ref_object = {
+                "MPMNumber": data_struct_item.MPMNumber,
+                "SlotNumber": data_struct_item.SlotNumber,
+                "ChannelNumber": data_struct_item.ChannelNumber,
+                "log_data": list(self.log_data),
+                "trigger": list(array('d', trigger_data)),
+                "monitor": list(array('d', monitor_data)),
+                "rescaled_wavelength": list(array('d', wavelength_array)),
+                "rescaled_monitor": list(array('d', rescaled_ref_mon)),  # rescaled monitor data
+                "rescaled_reference_power": list(array('d', rescaled_ref_pwr)),  # rescaled reference power
+            }
+            self.reference_data_array.append(ref_object)
 
-    def get_wavelength_table(self,
-                             data_struct_item: STSDataStruct,
-                             trigger_length: int) -> None:
+            return None
+
+    def get_wavelength_table(self, data_struct_item: STSDataStruct, trigger_length: int) -> None:
         """
         Gets the list of wavelengths from the most recent scan.
 
