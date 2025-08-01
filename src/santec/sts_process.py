@@ -255,34 +255,66 @@ class StsProcess(STSData):
 
     def _base_sweep_process(self) -> None:
         """
-        Configures TSL/MPM and Daq card to perform a sweep process.
+        Configures TSL & MPM (& DAQ) to perform a sweep process.
 
         Raises:
             RuntimeError: If TSL/MPM and Daq instruments are not synchronized
-            TSL or MPM times out or issues with the Daq card.
+            TSL or MPM times out.
             Exception: If there is an issue with TSL sweep process.
         """
         logger.info("STS sweep proces")
+
+        # Start the TSL sweep proces
         self._tsl.start_sweep()
+
+        # Start the MPM logging
         self._mpm.logging_start()
+
         try:
-            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
-            self._spu.sampling_start()
+            # Wait until the TSL is set to "Waiting for trigger" status
+            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=4)
+
+            # Start SPU sampling
+            if self._spu:
+                self._spu.sampling_start()
+                self._spu.sampling_wait()
+
+            # Calculate the mpm wait time
+            mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.sweep_speed * 1100)
+            if mpm_wait_time < 5000:
+                mpm_wait_time = 5000
+
+            # Issue the TSL soft trigger
             self._tsl.soft_trigger()
-            self._spu.sampling_wait()
+
+            # Wait until the TSL is set to "Standby" status
+            self._tsl.wait_for_sweep_status(waiting_time=mpm_wait_time, sweep_status=1)
+
+            # Wait for MPM log completion
             self._mpm.wait_for_log_completion()
+
+            # Stop the MPM logging
             self._mpm.logging_stop(True)
+
+            # Wait until the TSL is set to "Standby" status
+            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+
+            # Start the TSL sweep
+            self._tsl.start_sweep()
+
         except RuntimeError as scan_exception:
             self._tsl.stop_sweep(False)
             self._mpm.logging_stop(False)
             logger.error(scan_exception)
             raise scan_exception
+
         except Exception as tsl_exception:
             self._mpm.logging_stop(False)
             logger.error(tsl_exception)
             raise tsl_exception
-        self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+
         logger.info("STS base sweep process done.")
+
         return None
 
     def _get_reference_data(self, data_struct_item: STSDataStruct) -> None:
