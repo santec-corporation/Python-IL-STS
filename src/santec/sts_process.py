@@ -264,6 +264,8 @@ class StsProcess(STSData):
         """
         logger.info("STS sweep proces")
 
+        print("\nScanning Started....")
+
         # Start the TSL sweep proces
         self._tsl.start_sweep()
 
@@ -272,12 +274,11 @@ class StsProcess(STSData):
 
         try:
             # Wait until the TSL is set to "Waiting for trigger" status
-            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=4)
+            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
 
             # Start SPU sampling
             if self._spu:
                 self._spu.sampling_start()
-                self._spu.sampling_wait()
 
             # Calculate the mpm wait time
             mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.sweep_speed * 1100)
@@ -286,6 +287,10 @@ class StsProcess(STSData):
 
             # Issue the TSL soft trigger
             self._tsl.soft_trigger()
+
+            # SPU wait for for sweep completion
+            if self._spu:
+                self._spu.sampling_wait()
 
             # Wait until the TSL is set to "Standby" status
             self._tsl.wait_for_sweep_status(waiting_time=mpm_wait_time, sweep_status=1)
@@ -297,7 +302,7 @@ class StsProcess(STSData):
             self._mpm.logging_stop(True)
 
             # Wait until the TSL is set to "Standby" status
-            self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=1)
 
             # Start the TSL sweep
             self._tsl.start_sweep()
@@ -312,6 +317,8 @@ class StsProcess(STSData):
             self._mpm.logging_stop(False)
             logger.error(tsl_exception)
             raise tsl_exception
+
+        print("\n....Scan Completed")
 
         logger.info("STS base sweep process done.")
 
@@ -702,8 +709,7 @@ class StsProcess(STSData):
             # Set the reference dynamic_range value to the MPM channel
             self._mpm.set_channel_range(i.SlotNumber, i.ChannelNumber, reference_range)
 
-            print("\nScanning...")
-
+            # Base sweep process
             self._base_sweep_process()
 
             # Get sampling data & Add in STSProcess Class
