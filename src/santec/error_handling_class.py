@@ -50,7 +50,7 @@ def instrument_error_strings(errorcode):
 
     errorcode = int(errorcode)
     if errorcode in instrument_error:
-        return instrument_error[errorcode]
+        return str(instrument_error[errorcode])
 
     raise InstrumentError(f"Unrecognized error code: {errorcode}")
 
@@ -84,6 +84,6 @@ def sts_process_error_strings(errorcode):
 
     errorcode = int(errorcode)
     if errorcode in process_error:
-        return process_error[errorcode]
+        return str(process_error[errorcode])
 
     raise STSProcessError(f"Unrecognized error code: {errorcode}")
