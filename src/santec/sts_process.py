@@ -240,6 +240,52 @@ class StsProcess(STSData):
         self.ref_data.clear()
         self.dynamic_range.clear()
 
+    @staticmethod
+    def _get_reference_range(power: float):
+        """ Returns the optimal dynamic_range for reference. """
+        if power >= 0:
+            return 1
+        elif power >= -10:
+            return 2
+        elif power >= -20:
+            return 3
+        elif power >= -30:
+            return 4
+        else:
+            return 5
+
+    def _base_sweep_process(self) -> None:
+        """
+        Configures TSL/MPM and Daq card to perform a sweep process.
+
+        Raises:
+            RuntimeError: If TSL/MPM and Daq instruments are not synchronized
+            TSL or MPM times out or issues with the Daq card.
+            Exception: If there is an issue with TSL sweep process.
+        """
+        logger.info("STS sweep proces")
+        self._tsl.start_sweep()
+        self._mpm.logging_start()
+        try:
+            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
+            self._spu.sampling_start()
+            self._tsl.soft_trigger()
+            self._spu.sampling_wait()
+            self._mpm.wait_for_log_completion()
+            self._mpm.logging_stop(True)
+        except RuntimeError as scan_exception:
+            self._tsl.stop_sweep(False)
+            self._mpm.logging_stop(False)
+            logger.error(scan_exception)
+            raise scan_exception
+        except Exception as tsl_exception:
+            self._mpm.logging_stop(False)
+            logger.error(tsl_exception)
+            raise tsl_exception
+        self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
+        logger.info("STS base sweep process done.")
+        return None
+
     # endregion
 
     def set_parameters(self) -> None:
@@ -392,11 +438,23 @@ class StsProcess(STSData):
             input("\nConnect Slot{} Ch{}, then press ENTER".format(i.SlotNumber, i.ChannelNumber))
             logger.info("STS reference of Slot{} Ch{}".format(i.SlotNumber, i.ChannelNumber))
 
-            # Set MPM dynamic_range for 1st setting renge
-            self._mpm.set_range(self.dynamic_range[0])
+            # Set MPM dynamic dynamic_range mode to AUTO
+            self._mpm.set_read_range_mode()
+
+            time.sleep(0.1)  # Add sleep time for 100ms
+
+            # Get the read power of the MPM i.ChannelNumber
+            power = self._mpm.get_read_power_channel(i.SlotNumber, i.ChannelNumber)
+
+            # Get the reference dynamic_range based on the read power
+            reference_range = self._get_reference_range(power)
+
+            # Set the reference dynamic_range value to the MPM channel
+            self._mpm.set_channel_range(i.SlotNumber, i.ChannelNumber, reference_range)
 
             print("\nScanning...")
-            self.base_sweep_process()
+
+            self._base_sweep_process()
 
             # Get sampling data & Add in STSProcess Class
             self.get_reference_data(i)
@@ -475,7 +533,7 @@ class StsProcess(STSData):
         sweep_count = 1
         for mpm_range in self.dynamic_range:
             self._mpm.set_range(mpm_range)
-            self.base_sweep_process()
+            self._base_sweep_process()
             error_string = self.sts_get_measurement_data(sweep_count)  # Get DUT data
             # print(error_string)
             sweep_count += 1
@@ -531,38 +589,6 @@ class StsProcess(STSData):
 
         #####################################################################
         logger.info("STS measurement operation done.")
-
-    def base_sweep_process(self) -> None:
-        """
-        Configures TSL/MPM and Daq card to perform a sweep process.
-
-        Raises:
-            RuntimeError: If TSL/MPM and Daq instruments are not synchronized
-            TSL or MPM times out or issues with the Daq card.
-            Exception: If there is an issue with TSL sweep process.
-        """
-        logger.info("STS sweep proces")
-        self._tsl.start_sweep()
-        self._mpm.logging_start()
-        try:
-            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
-            self._spu.sampling_start()
-            self._tsl.soft_trigger()
-            self._spu.sampling_wait()
-            self._mpm.wait_for_log_completion()
-            self._mpm.logging_stop(True)
-        except RuntimeError as scan_exception:
-            self._tsl.stop_sweep(False)
-            self._mpm.logging_stop(False)
-            logger.error(scan_exception)
-            raise scan_exception
-        except Exception as tsl_exception:
-            self._mpm.logging_stop(False)
-            logger.error(tsl_exception)
-            raise tsl_exception
-        self._tsl.wait_for_sweep_status(waiting_time=5000, sweep_status=1)
-        logger.info("STS base sweep process done.")
-        return None
 
     def get_reference_data(self, data_struct_item: STSDataStruct) -> None:
         """
