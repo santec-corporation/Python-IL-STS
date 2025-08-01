@@ -46,7 +46,7 @@ def setting_tsl_sweep_params(connected_tsl: TslInstrument, previous_param_data: 
         stop_wavelength = float(input("Input Stop Wavelength (nm): "))
         sweep_step = float(input("Input Sweep Step (pm): ")) / 1000
 
-        if connected_tsl.get_tsl_type_flag() is True:
+        if connected_tsl.get_tsl_type_flag():
             sweep_speed = float(input("Input Sweep Speed (nm/sec): "))
         else:
             num = 1
@@ -120,23 +120,17 @@ def prompt_and_get_previous_reference_data() -> dict | None:
     return previous_reference
 
 
-def save_all_data(tsl: TslInstrument, previous_param_data: dict, ilsts: StsProcess) -> None:
+def save_all_data(ilsts: StsProcess) -> None:
     """
     Save measurement and reference data to files.
 
     Parameters:
-        tsl (TslInstrument): Instance of the TSL class.
-        previous_param_data (dict): Previous sweep process data, if available.
         ilsts (StsProcess): Instance of the ILSTS class.
 
     Returns:
         None
     """
     print("\n")
-    if previous_param_data is None:
-        # Saving parameters to file
-        file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
-
     # Saving reference data to file
     file_saving.save_reference_data(ilsts, file_saving.FILE_LAST_SCAN_REFERENCE_DATA)
 
@@ -237,8 +231,7 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         daq: The daq device.
     """
     # Set the TSL properties
-    previous_param_data = prompt_and_get_previous_param_data(
-        file_saving.FILE_LAST_SCAN_PARAMS)
+    previous_param_data = prompt_and_get_previous_param_data(file_saving.FILE_LAST_SCAN_PARAMS)
     setting_tsl_sweep_params(tsl, previous_param_data)
 
     # Initiate and run the ILSTS
@@ -258,10 +251,14 @@ def wavelength_dependent_loss(tsl, mpm, daq):
 
         # Check for previously saved reference data
         previous_ref_data_array = None
-        if previous_param_data is not None:
+        if previous_param_data:
             previous_ref_data_array = prompt_and_get_previous_reference_data()
-        if previous_ref_data_array is not None:
+        if previous_ref_data_array:
             ilsts.reference_data_array = previous_ref_data_array
+
+        # Saving parameters to file
+        if not previous_param_data:
+            file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
 
         # Run a reference scan if previously saved reference data not found
         if len(ilsts.reference_data_array) == 0:
