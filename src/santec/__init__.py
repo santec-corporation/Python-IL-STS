@@ -136,14 +136,12 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 from . import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
-from .sts_process_2 import StsProcess2
 from .daq_device_class import SpuDevice
 from .tsl_instrument_class import TslInstrument
 from .mpm_instrument_class import MpmInstrument
 
 __all__ = [
     "StsProcess",
-    "StsProcess2",
     "TslInstrument",
     "MpmInstrument",
     "SpuDevice",
