@@ -54,7 +54,7 @@ class StsProcess(STSData):
     Attributes:
         _tsl (TslInstrument): TSL instrument class handle.
         _mpm (MpmInstrument): MPM instrument class handle.
-        _spu (SpuDevice): SPU device class handle.
+        _spu (SpuDevice): SPU device class handle. Used only for MPM-200, 210 & 210H models
         _ilsts (ILSTS): ILSTS class instance from Santec namespace.
 
     Parameters:
@@ -72,8 +72,7 @@ class StsProcess(STSData):
         self._mpm = mpm
         self._spu = spu
         self._ilsts = ILSTS()
-        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm},"
-                    f" SpuDevice: {spu}")
+        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm}, SpuDevice: {spu}")
 
     @property
     def il_sts(self) -> ILSTS:

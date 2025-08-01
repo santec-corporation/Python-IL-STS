@@ -243,11 +243,8 @@ def wavelength_dependent_loss(tsl, mpm, daq):
     setting_tsl_sweep_params(tsl, previous_param_data)
 
     # Initiate and run the ILSTS
-    if mpm is not None:
-        if daq is None:
-            ilsts = StsProcess2(tsl, mpm)       # Used for MPM-220 models
-        else:
-            ilsts = StsProcess(tsl, mpm, daq)   # Used for MPM-200 & 210 models
+    if mpm:
+        ilsts = StsProcess(tsl, mpm, daq)
 
         # Select channels to be measured.
         ilsts.set_selected_channels(previous_param_data)
