@@ -76,7 +76,7 @@ class StsProcess(STSData):
                     f" SpuDevice: {spu}")
 
     @property
-    def ilsts(self) -> ILSTS:
+    def il_sts(self) -> ILSTS:
         """
         Returns:
             ILSTS (Santec) class handle from the StsProcess class attributes.

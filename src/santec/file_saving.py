@@ -177,13 +177,13 @@ def save_measurement_data(ilsts: StsProcess,
     il_data_array = []
 
     # Get rescaling wavelength table
-    errorcode, wavelength_table = ilsts.ilsts.Get_Target_Wavelength_Table(None)
+    errorcode, wavelength_table = ilsts.il_sts.Get_Target_Wavelength_Table(None)
     if errorcode != 0:
         raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
     for item in ilsts.merge_data:
         # Pull out IL data of after merge
-        errorcode, ilsts.il_data = ilsts.ilsts.Get_IL_Merge_Data(None, item)
+        errorcode, ilsts.il_data = ilsts.il_sts.Get_IL_Merge_Data(None, item)
         if errorcode != 0:
             raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
@@ -227,7 +227,7 @@ def sts_save_rawdata_unused(ilsts: StsProcess,
         fpath (str): path and file name
         mpm_range (int): Optical dynamic dynamic_range of interest
     """
-    errorcode, wavelength_table = ilsts.ilsts.Get_Target_Wavelength_Table(None)
+    errorcode, wavelength_table = ilsts.il_sts.Get_Target_Wavelength_Table(None)
     if errorcode != 0:
         raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
@@ -240,7 +240,7 @@ def sts_save_rawdata_unused(ilsts: StsProcess,
             input()
             continue
         # Pull out measurement raw data of after rescaling
-        errorcode, dut_pwr, dut_mon = ilsts.ilsts.Get_Meas_RawData(item, None, None)
+        errorcode, dut_pwr, dut_mon = ilsts.il_sts.Get_Meas_RawData(item, None, None)
         if errorcode != 0:
             raise STSProcessError(str(errorcode) + ": " + sts_process_error_strings(errorcode))
 
