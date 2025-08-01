@@ -296,7 +296,7 @@ def wavelength_dependent_loss(tsl, mpm, daq):
 
             ans = input("\nRedo Scan ? (y/n): ")
 
-        save_all_data(tsl, previous_param_data, ilsts)
+        save_all_data(ilsts)
 
 
 def power_sweep(tsl, mpm):
