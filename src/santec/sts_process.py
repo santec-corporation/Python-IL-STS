@@ -83,50 +83,7 @@ class StsProcess(STSData):
         """
         return self._ilsts
 
-    def set_parameters(self) -> None:
-        """
-        Sets the sweep parameters for an STS process operation.
-
-        Raises:
-            STSProcessError: When Reference/DUT data couldn't be erased,
-                        When Wavelength table couldn't be created,
-                        Error with rescaling,
-                        If setting STS sweep parameters fails.
-        """
-        logger.info("Setting STS params")
-
-        # Logging parameters for MPM
-        self._mpm.set_logging_parameters(self._tsl.start_wavelength,
-                                         self._tsl.stop_wavelength,
-                                         self._tsl.sweep_step,
-                                         self._tsl.sweep_speed)
-
-        # Logging parameter for SPU(DAQ)
-        if self._spu is not None:
-            self._spu.set_logging_parameters(self._tsl.start_wavelength,
-                                             self._tsl.stop_wavelength,
-                                             self._tsl.sweep_speed,
-                                             self._tsl.actual_step)
-
-            # Pass MPM averaging time to SPU Class
-            self._spu.AveragingTime = self._mpm.get_averaging_time()
-
-        # Add sleep time for 100ms
-        time.sleep(0.1)
-
-        # Reference data Clear
-        self._clear_reference_data()
-
-        # Clear measurement data
-        self._clear_measurement_data()
-
-        # Set Rescaling mode for STSProcess class
-        self._rescaling_settings()
-
-        # Create sweep wavelength table
-        self._create_wavelength_table()
-
-        logger.info("STS params set.")
+    # region Private Methods
 
     def _clear_reference_data(self):
         sts_error = self._ilsts.Clear_Refdata()
@@ -183,6 +140,89 @@ class StsProcess(STSData):
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
+    def _set_all_channels(self):
+        """ Selects all modules and all channels that are connected to MPM. """
+        logger.info("Selecting all channels for operation")
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                self.selected_chans.append([module.module_number, channel_number])
+
+    def _set_even_channels(self) -> None:
+        """ Selects only even channels on the MPM. """
+        logger.info("Selecting even channels for operation")
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 == 0:
+                    self.selected_chans.append([module.module_number, channel_number])
+
+    def _set_odd_channels(self) -> None:
+        """ Selects only odd channels on the MPM. """
+        logger.info("Selecting odd channels for operation")
+        for module in self.all_modules:
+            for channel_number in module.channels:
+                if channel_number % 2 != 0:
+                    self.selected_chans.append([module.module_number, channel_number])
+
+    def _set_special_channels(self) -> None:
+        """ Manually enter/select the channels to be measured. """
+        logger.info("Selecting specific channels for operation")
+        selection = input("Input (module,channel) to be tested [ex: (0,1); (1,1)]  ")
+        selection = re.findall(r"[\w']+", selection)
+        logger.info("Special channel user selection: %s", selection)
+
+        i = 0
+        while i <= len(selection) - 1:
+            self.selected_chans.append([selection[i], selection[i + 1]])
+            i += 2
+        logger.info("Special channels set.")
+
+    # endregion
+
+    def set_parameters(self) -> None:
+        """
+        Sets the sweep parameters for an STS process operation.
+
+        Raises:
+            STSProcessError: When Reference/DUT data couldn't be erased,
+                        When Wavelength table couldn't be created,
+                        Error with rescaling,
+                        If setting STS sweep parameters fails.
+        """
+        logger.info("Setting STS params")
+
+        # Logging parameters for MPM
+        self._mpm.set_logging_parameters(self._tsl.start_wavelength,
+                                         self._tsl.stop_wavelength,
+                                         self._tsl.sweep_step,
+                                         self._tsl.sweep_speed)
+
+        # Logging parameter for SPU(DAQ)
+        if self._spu is not None:
+            self._spu.set_logging_parameters(self._tsl.start_wavelength,
+                                             self._tsl.stop_wavelength,
+                                             self._tsl.sweep_speed,
+                                             self._tsl.actual_step)
+
+            # Pass MPM averaging time to SPU Class
+            self._spu.AveragingTime = self._mpm.get_averaging_time()
+
+        # Add sleep time for 100ms
+        time.sleep(0.1)
+
+        # Reference data Clear
+        self._clear_reference_data()
+
+        # Clear measurement data
+        self._clear_measurement_data()
+
+        # Set Rescaling mode for STSProcess class
+        self._rescaling_settings()
+
+        # Create sweep wavelength table
+        self._create_wavelength_table()
+
+        logger.info("STS params set.")
+
     def set_selected_channels(self, previous_param_data: dict) -> None:
         """
         Select the channels to be measured.
@@ -219,10 +259,10 @@ class StsProcess(STSData):
                 continue
             print("\r" + "Module No. {}: {} - Channels: {}".format(module.module_number, module.module_type, module.channels))
 
-        mpm_choices = {'1': self.set_all_channels,
-                       '2': self.set_even_channels,
-                       '3': self.set_odd_channels,
-                       '4': self.set_special_channels}
+        mpm_choices = {'1': self._set_all_channels,
+                       '2': self._set_even_channels,
+                       '3': self._set_odd_channels,
+                       '4': self._set_special_channels}
 
         print("""\nChannels measurement options:\n  1. All channels\n"""
               """  2. Even channels\n  3. Odd channels\n  4. Specific channels""")
@@ -230,42 +270,7 @@ class StsProcess(STSData):
         mpm_choices[user_selection]()
         logger.info(f"Selected channels: {self.selected_chans}")
         logger.info("STS channel selection done.")
-
-    def set_all_channels(self):
-        """ Selects all modules and all channels that are connected to MPM. """
-        logger.info("Selecting all channels for operation")
-        for module in self.all_modules:
-            for channel_number in module.channels:
-                self.selected_chans.append([module.module_number, channel_number])
-
-    def set_even_channels(self) -> None:
-        """ Selects only even channels on the MPM. """
-        logger.info("Selecting even channels for operation")
-        for module in self.all_modules:
-            for channel_number in module.channels:
-                if channel_number % 2 == 0:
-                    self.selected_chans.append([module.module_number, channel_number])
-
-    def set_odd_channels(self) -> None:
-        """ Selects only odd channels on the MPM. """
-        logger.info("Selecting odd channels for operation")
-        for module in self.all_modules:
-            for channel_number in module.channels:
-                if channel_number % 2 != 0:
-                    self.selected_chans.append([module.module_number, channel_number])
-
-    def set_special_channels(self) -> None:
-        """ Manually enter/select the channels to be measured. """
-        logger.info("Selecting specific channels for operation")
-        selection = input("Input (module,channel) to be tested [ex: (0,1); (1,1)]  ")
-        selection = re.findall(r"[\w']+", selection)
-        logger.info("Special channel user selection: %s", selection)
-
-        i = 0
-        while i <= len(selection) - 1:
-            self.selected_chans.append([selection[i], selection[i + 1]])
-            i += 2
-        logger.info("Special channels set.")
+        return None
 
     def mpm_215_selection_check(self) -> bool:
         """ Checks if an MPM-215 module is present and returns a boolean. """
