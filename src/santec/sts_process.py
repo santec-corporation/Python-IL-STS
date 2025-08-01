@@ -121,7 +121,7 @@ class StsProcess(STSData):
         self._clear_measurement_data()
 
         # Set Rescaling mode for STSProcess class
-        self._set_rescaling_set()
+        self._rescaling_settings()
 
         # Create sweep wavelength table
         self._create_wavelength_table()
@@ -167,9 +167,14 @@ class StsProcess(STSData):
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
-    def _set_rescaling_set(self):
+    def _rescaling_settings(self):
         logger.info("STS rescaling settings")
-        sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
+        if self._spu is None:
+            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_TSLMonitor,
+                                                          self._mpm.get_averaging_time(),
+                                                          True)
+        else:
+            sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
                                                       self._mpm.get_averaging_time(),
                                                       True)
 
