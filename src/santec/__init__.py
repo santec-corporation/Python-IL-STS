@@ -10,19 +10,18 @@ import os
 import logging
 import datetime
 import argparse
-import ctypes
 import sys
 import platform
 import clr
 
 # About
-__version__ = "2.8.20"
+__version__ = "2.9.0"
 __author__ = "Chentir MT"
 __project_name__ = "Santec_IL_STS"
 __organization__ = "Santec Holdings Corporation"
 __description__ = "Program to measure the Insertion Loss using the Swept Test System"
 __url__ = "https://github.com/santec-corporation/Santec_IL_STS"
-__date__ = "2025-06-11"
+__date__ = "2025-08-01"
 __license__ = "GNU General Public License v3.0"
 __copyright__ = f"Copyright 2021-{datetime.date.today().year}, {__organization__}"
 
@@ -136,14 +135,12 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 from . import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
-from .sts_process_2 import StsProcess2
 from .daq_device_class import SpuDevice
 from .tsl_instrument_class import TslInstrument
 from .mpm_instrument_class import MpmInstrument
 
 __all__ = [
     "StsProcess",
-    "StsProcess2",
     "TslInstrument",
     "MpmInstrument",
     "SpuDevice",
