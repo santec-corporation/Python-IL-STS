@@ -2,6 +2,29 @@
 <p align="right"> <a href="https://www.santec.com/en/" target="_blank" rel="noreferrer"> <img src="https://www.santec.com/dcms_media/image/common_logo01.png" alt="santec" 
   width="250" height="45"/> </a> </p>
 
+
+> ## ⚡ Next-Generation Project: PySantec
+> We’re building **PySantec**, the next-gen Python package for Santec IL/PDL Swept Test Systems.
+> It’s installable via **PyPI** and designed to be more modular, faster, and easier to use.
+>
+> - 📦 Install from PyPI: `pip install pysantec`
+> - 📚 Repo: https://github.com/santec-corporation/pysantec
+> - 🔗 PyPI: https://pypi.org/project/pysantec/
+> - 💻 Platform: **Windows only** (uses Santec’s .NET Framework DLLs)
+>
+> **Current PySantec Status**
+> - ✅ Instrument **detection & connection** completed
+> - 🚧 **IL** workflow: in progress
+> - 🚧 **PDL** workflow: in progress
+> - 🧪 Jupyter examples: initial notebooks planned/landing soon
+>
+> **What this means for Python-IL-STS**
+> - This repository remains available and usable.
+> - PySantec is the **new direction**; we encourage users to start trying it and share feedback.
+>
+> 👉 Track progress and updates in the PySantec repo’s README/CHANGELOG.
+
+
 <h1 align="left"> Santec IL STS </h1>
 
 Program to measure Insertion Loss. <br> <br>
