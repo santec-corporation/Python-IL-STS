@@ -1,0 +1,14 @@
+name: syncToGitee
+run-name: "[${{ github.workflow }}] - ${{ github.event.head_commit.message }}"
+
+on:
+  push: 
+  workflow_dispatch:
+  
+jobs:
+  call-reusable-sync:
+    name: Call Gitee Sync Workflow
+    uses: santec-corporation/gitee-sync/.github/workflows/sync-to-gitee.yml@main
+    secrets: inherit
+    with:
+      repo-name: Python-IL-STS
