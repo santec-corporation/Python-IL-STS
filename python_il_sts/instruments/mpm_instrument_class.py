@@ -9,11 +9,11 @@ from Santec import MPM, CommunicationTerminator
 from Santec.Communication import CommunicationMethod, GPIBConnectType  # Enumeration Class
 
 # Importing instrument error strings
-from .error_handling_class import InstrumentError, instrument_error_strings
-from .get_address import Instrument
+from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
+from python_il_sts.connections.get_address import Instrument
 
 # Import program logger
-from .logger import get_logger
+from python_il_sts.logger import get_logger
 logger = get_logger("MPM Instrument Class.")
 
 

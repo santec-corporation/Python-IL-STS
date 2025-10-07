@@ -12,7 +12,7 @@ import nidaqmx
 from Santec.Communication import MainCommunication
 
 # Import program logger
-from .logger import get_logger
+from python_il_sts.logger import get_logger
 logger = get_logger("Get Address Class.")
 
 

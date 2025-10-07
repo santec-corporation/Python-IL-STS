@@ -8,10 +8,10 @@ DAQ Device Class.
 from Santec import SPU
 
 # Importing instrument error strings
-from .error_handling_class import InstrumentError, instrument_error_strings
+from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
 
 # Import program logger
-from .logger import get_logger
+from python_il_sts.logger import get_logger
 logger = get_logger("Spu Device Class.")
 
 

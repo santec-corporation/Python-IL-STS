@@ -13,13 +13,13 @@ from dataclasses import dataclass
 from Santec.STSProcess import ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type
 
 # Importing instrument classes and sts error strings
-from .daq_device_class import SpuDevice
-from .mpm_instrument_class import MpmInstrument
-from .tsl_instrument_class import TslInstrument
-from .error_handling_class import STSProcessError, sts_process_error_strings
+from python_il_sts.instruments.daq_device_class import SpuDevice
+from python_il_sts.instruments.mpm_instrument_class import MpmInstrument
+from python_il_sts.instruments.tsl_instrument_class import TslInstrument
+from python_il_sts.utils.error_handling_class import STSProcessError, sts_process_error_strings
 
 # Import program logger
-from .logger import get_logger
+from python_il_sts.logger import get_logger
 logger = get_logger("STS Process Class.")
 
 

@@ -11,13 +11,13 @@
 
 
 ## Core Scripts Overview
-- [get_address.py](/python_il_sts/get_address.py): Detects connected instruments via GPIB and USB.
-- [tsl_instrument_class.py](/python_il_sts/tsl_instrument_class.py): Manages TSL instrument functionality.
-- [mpm_instrument_class.py](/python_il_sts/mpm_instrument_class.py): Handles MPM instrument operations.
-- [daq_device_class.py](/python_il_sts/daq_device_class.py): Interacts with DAQ devices.
-- [sts_process.py](/python_il_sts/sts_process.py): Processes data from the Swept Test System.
-- [error_handling_class.py](/python_il_sts/error_handling_class.py): Manages errors related to Instrument DLL and STS Process DLL.
-- [file_saving.py](/python_il_sts/file_saving.py): Records operational data for the Swept Test System.
+- [get_address.py](/python_il_sts/connections/get_address.py): Detects connected instruments via GPIB and USB.
+- [tsl_instrument_class.py](/python_il_sts/instruments/tsl_instrument_class.py): Manages TSL instrument functionality.
+- [mpm_instrument_class.py](/python_il_sts/instruments/mpm_instrument_class.py): Handles MPM instrument operations.
+- [daq_device_class.py](/python_il_sts/instruments/daq_device_class.py): Interacts with DAQ devices.
+- [sts_process.py](/python_il_sts/measurements/sts_process.py): Processes data from the Swept Test System.
+- [error_handling_class.py](/python_il_sts/utils/error_handling_class.py): Manages errors related to Instrument DLL and STS Process DLL.
+- [file_saving.py](/python_il_sts/utils/file_saving.py): Records operational data for the Swept Test System.
 
 ---
 
