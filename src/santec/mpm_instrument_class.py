@@ -6,9 +6,6 @@ MPM Instrument Class.
 @organization: Santec Holdings Corp.
 """
 
-# Import numpy for array operations
-from numpy import array
-
 # Importing from Santec namespace
 from Santec import MPM, CommunicationTerminator
 from Santec.Communication import CommunicationMethod, GPIBConnectType  # Enumeration Class
@@ -18,7 +15,9 @@ from .error_handling_class import InstrumentError, instrument_error_strings
 from .get_address import Instrument
 
 # Import program logger
-from . import logger
+from .logger import get_logger
+
+logger = get_logger("MPM Instrument Class.")
 
 
 class ModuleData:

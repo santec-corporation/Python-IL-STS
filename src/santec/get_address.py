@@ -14,7 +14,9 @@ import nidaqmx
 from Santec.Communication import MainCommunication
 
 # Import program logger
-from . import logger
+from .logger import get_logger
+
+logger = get_logger("Get Address Class.")
 
 
 class Instrument:

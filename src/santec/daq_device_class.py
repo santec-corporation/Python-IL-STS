@@ -13,7 +13,9 @@ from Santec import SPU
 from .error_handling_class import InstrumentError, instrument_error_strings
 
 # Import program logger
-from . import logger
+from .logger import get_logger
+
+logger = get_logger("Spu Device Class.")
 
 
 class SpuDevice:

@@ -21,7 +21,10 @@ from .tsl_instrument_class import TslInstrument
 from .error_handling_class import STSProcessError, sts_process_error_strings
 
 # Import program logger
-from . import logger
+from .logger import get_logger
+
+logger = get_logger("STS Process Class.")
+
 
 @dataclass
 class STSData:

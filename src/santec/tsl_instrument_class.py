@@ -15,7 +15,9 @@ from .error_handling_class import InstrumentError, instrument_error_strings
 from .get_address import Instrument
 
 # Import program logger
-from . import logger
+from .logger import get_logger
+
+logger = get_logger("TSL Instrument Class.")
 
 
 class TslData:
