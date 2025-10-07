@@ -23,9 +23,9 @@ except Exception as e:
 # Import santec modules
 from .connections.get_address import GetAddress
 from .measurements.sts_process import StsProcess
-from .instruments.daq_device_class import DaqDevice
-from .instruments.tsl_instrument_class import TslInstrument
-from .instruments.mpm_instrument_class import MpmInstrument
+from .instruments.daq_instrument import DaqDevice
+from .instruments.tsl_instrument import TslInstrument
+from .instruments.mpm_instrument import MpmInstrument
 from .utils import file_saving
 
 

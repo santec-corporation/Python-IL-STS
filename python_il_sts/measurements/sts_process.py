@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from ..drivers.santec_wrapper import ILSTS, PDLSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, ModuleType
 
 # Importing instrument classes and sts error strings
-from python_il_sts.instruments.daq_device_class import DaqDevice
-from python_il_sts.instruments.mpm_instrument_class import MpmInstrument
-from python_il_sts.instruments.tsl_instrument_class import TslInstrument
+from python_il_sts.instruments.daq_instrument import DaqDevice
+from python_il_sts.instruments.mpm_instrument import MpmInstrument
+from python_il_sts.instruments.tsl_instrument import TslInstrument
 from python_il_sts.utils.error_handling_class import STSProcessError, sts_process_error_strings
 
 # Import program logger
