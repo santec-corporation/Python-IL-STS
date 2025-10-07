@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 STS Process Class.
 
@@ -22,7 +20,6 @@ from .error_handling_class import STSProcessError, sts_process_error_strings
 
 # Import program logger
 from .logger import get_logger
-
 logger = get_logger("STS Process Class.")
 
 

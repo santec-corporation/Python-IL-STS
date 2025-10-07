@@ -1,8 +1,5 @@
-# !/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
-Santec IL STS
+Python IL STS
 """
 
 import os
@@ -12,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
-from santec import TslInstrument, MpmInstrument, SpuDevice, GetAddress, file_saving, StsProcess
+from python_il_sts import TslInstrument, MpmInstrument, SpuDevice, GetAddress, file_saving, StsProcess
 
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000

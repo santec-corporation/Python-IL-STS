@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Get Instrument Addresses.
 Connection modes: GPIB, LAN or USB(only TSL).
@@ -15,7 +13,6 @@ from Santec.Communication import MainCommunication
 
 # Import program logger
 from .logger import get_logger
-
 logger = get_logger("Get Address Class.")
 
 

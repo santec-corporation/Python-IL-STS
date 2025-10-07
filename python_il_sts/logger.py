@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 
-from . import __about__
+from .__about__ import __version__
 
 # Ensure log directory exists
 LOG_DIR = "logs"
@@ -37,7 +37,7 @@ if not root_logger.hasHandlers():
     )
 
 # Log the project version
-logging.info(f"Project Version: {__about__.__version__}")
+logging.info(f"Project Version: {__version__}")
 
 
 def _log_run_info():

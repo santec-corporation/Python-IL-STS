@@ -6,8 +6,9 @@ Python IL STS process.
 
 import os
 import clr
-from .logger import get_logger
 
+# Get and initialize the logger
+from .logger import get_logger
 logger = get_logger(__name__)
 
 # Add the Santec DLLs to the root.
@@ -25,7 +26,7 @@ logger.info("Adding STSProcess DLL to the root, result: %s", result2)
 
 
 # Import santec modules
-from . import file_saving
+import file_saving
 from .get_address import GetAddress
 from .sts_process import StsProcess
 from .daq_device_class import SpuDevice

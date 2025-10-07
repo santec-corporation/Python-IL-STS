@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 TSL Instrument Class.
 
@@ -16,7 +14,6 @@ from .get_address import Instrument
 
 # Import program logger
 from .logger import get_logger
-
 logger = get_logger("TSL Instrument Class.")
 
 
