@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """
 Created on Wed 05 17:17:26 2024
 
-@author: chentir
 @organization: santec holdings corp.
 """
 
 # Importing high-level santec package and its modules
-from src.santec import TslInstrument, MpmInstrument, GetAddress
+from python_il_sts import TslInstrument, MpmInstrument, GetAddress
 
 # Initializing get instrument address class
 device_address = GetAddress()

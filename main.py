@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
-from python_il_sts import TslInstrument, MpmInstrument, SpuDevice, GetAddress, file_saving, StsProcess
+from python_il_sts import TslInstrument, MpmInstrument, SpuDevice, GetAddress, StsProcess, file_saving
 
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000

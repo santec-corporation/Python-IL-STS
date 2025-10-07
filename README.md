@@ -2,29 +2,6 @@
 <p align="right"> <a href="https://www.santec.com/en/" target="_blank" rel="noreferrer"> <img src="https://www.santec.com/dcms_media/image/common_logo01.png" alt="santec" 
   width="250" height="45"/> </a> </p>
 
-
-> ## ⚡ Next-Generation Project: PySantec
-> We’re building **PySantec**, the next-gen Python package for Santec IL/PDL Swept Test Systems.
-> It’s installable via **PyPI** and designed to be more modular, faster, and easier to use.
->
-> - 📦 Install from PyPI: `pip install pysantec`
-> - 📚 Repo: https://github.com/santec-corporation/pysantec
-> - 🔗 PyPI: https://pypi.org/project/pysantec/
-> - 💻 Platform: **Windows only** (uses Santec’s .NET Framework DLLs)
->
-> **Current PySantec Status**
-> - ✅ Instrument **detection & connection** completed
-> - 🚧 **IL** workflow: in progress
-> - 🚧 **PDL** workflow: in progress
-> - 🧪 Jupyter examples: initial notebooks planned/landing soon
->
-> **What this means for Python-IL-STS**
-> - This repository remains available and usable.
-> - PySantec is the **new direction**; we encourage users to start trying it and share feedback.
->
-> 👉 Track progress and updates in the PySantec repo’s README/CHANGELOG.
-
-
 <h1 align="left"> Santec IL STS </h1>
 
 Program to measure Insertion Loss. <br> <br>
@@ -53,7 +30,7 @@ This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL 
 
 ### System Requirements
 
-**Python:** Any version (Version 3.12 recommended)
+**Python:** 3.12+
 
 **Platform:** Windows 10
 - **Drivers:** 
@@ -67,20 +44,26 @@ This tool facilitates the measurement of Insertion Loss (IL) using Santec's TSL 
   - NI-DAQmx: [2024 Q4](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#549669) (Latest)
   - NI-VISA: [2024 Q4](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html#548367) (Latest)
 
+**Santec DLLs:** Installed via Santec Swept Test System (IL/PDL) software.
+- Download the latest version of the STS IL/PDL software [here](https://downloads.santec.com/downloads).
+- .NET: Framework 4.5.2+ (as required by Santec DLLs)
+
+> ⚠️ PySantec relies on Santec’s .NET Framework DLLs and therefore does not support Linux or macOS. <br>
+> Importing the package on non‑Windows platforms raises an error.
+
+
 ### Dependencies
 
 - [pythonnet](https://pythonnet.github.io/) : Also known as `clr`, for .NET interoperability
 - [pyvisa](https://pyvisa.readthedocs.io/en/latest/index.html) : For controlling measurement devices
-- [nidaqmx](https://nidaqmx-python.readthedocs.io/en/latest/) : API for NIDAQ driver interaction
-- Santec DLLs: _Instrument DLL_, _STSProcess DLL_ and _FTD2XX_NET DLL_.
-  <br>
-  Refer to the DLL documentation here:
-  [About DLLs](https://github.com/santec-corporation/Python-IL-STS/blob/stable/src/santec/DLL/README.md)
+- [nidaqmx](https://nidaqmx-python.readthedocs.io/en/latest/) : API for NI DAQ driver interaction
+
 
 ### Supported Instruments
 The Swept Test System IL PDL Software is designed to function with:
 - _TSL-510, TSL-550, TSL-570, TSL-710 and TSL-770 laser series_
-- _MPM-210 and MPM210H power meter series_
+- _MPM-210, MPM-210H and MPM-220 power meter series_
+
 
 ### Supported Instrument Connections
 - **TSL-510, TSL-550, TSL-710**  
@@ -89,8 +72,8 @@ The Swept Test System IL PDL Software is designed to function with:
 - **TSL-570, TSL-770**  
   **Supported Interfaces**: GPIB, USB, or LAN
 
-- **MPM-210H**  
-  **Supported Interfaces**: GPIB, USB, or LAN
+- **MPM-210, MPM-210H and MPM-220**  
+  **Supported Interfaces**: GPIB or LAN
 
 ---
 
@@ -99,7 +82,7 @@ The Swept Test System IL PDL Software is designed to function with:
 ### Python Installation
 
 **Download and Install Python:**
-Version 3.12 recommended.
+Version 3.12+ recommended.
    - Go to the [Python Downloads](https://www.python.org/downloads/) page.
    - Download the latest version.
    - Follow the installation instructions for your operating system.
@@ -109,16 +92,16 @@ Version 3.12 recommended.
 To clone the repository, use the following command in your terminal:
 
 ```bash
-git clone https://github.com/santec-corporation/Santec_IL_STS.git
+git clone https://github.com/santec-corporation/Python-IL-STS.git
 ```
 
 ### Downloading the Latest Release,
-You can download the latest release directly from the [Releases](https://github.com/santec-corporation/Santec_IL_STS/releases) page.
+You can download the latest release directly from the [Releases](https://github.com/santec-corporation/Python-IL-STS/releases) page.
 
 ### Executing the Program
 1. Navigate to the Project Directory,
    ```bash
-    cd Santec_IL_STS
+    cd Python_IL_STS
    ```
    
 2. Install the dependencies, 
@@ -133,12 +116,7 @@ You can download the latest release directly from the [Releases](https://github.
 
 Optional steps,
 
-4. Enable logging and log to file,
-   ```bash
-    python main.py --enable_logging=True
-   ```
-
-5. Log to the screen, call the `log_to_screen()` method in `main.py`.
+4. Log to the screen, call the `log_to_screen()` method in `main.py`.
 
 ### Upgrading Dependencies
 
@@ -158,5 +136,3 @@ Optional steps,
   ```
 
 <br/>
-
-### For more information about the project, read the detailed readme [here](https://github.com/santec-corporation/Santec_IL_STS/blob/stable/docs/README.md).
