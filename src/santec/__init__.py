@@ -9,7 +9,6 @@ Santec IL STS process.
 import os
 import logging
 import datetime
-import argparse
 import sys
 import platform
 import clr
@@ -66,10 +65,6 @@ def setup_logging(level=logging.DEBUG, file_write_mode='w', enable_logging=True)
     return setup_logger
 
 
-# parser = argparse.ArgumentParser(description='Configure logging.')
-# parser.add_argument('--enable_logging', type=bool, default=False, help='Enable logging')
-# args = parser.parse_args()
-# logger = setup_logging(enable_logging=args.enable_logging)
 logger = setup_logging()
 
 
