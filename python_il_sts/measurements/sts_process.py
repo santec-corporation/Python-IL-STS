@@ -9,11 +9,10 @@ import time
 from array import array
 from dataclasses import dataclass
 
-# Importing classes from STSProcess DLL
-from Santec.STSProcess import ILSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, Module_Type
+from ..drivers.santec_wrapper import ILSTS, PDLSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, ModuleType
 
 # Importing instrument classes and sts error strings
-from python_il_sts.instruments.daq_device_class import SpuDevice
+from python_il_sts.instruments.daq_device_class import DaqDevice
 from python_il_sts.instruments.mpm_instrument_class import MpmInstrument
 from python_il_sts.instruments.tsl_instrument_class import TslInstrument
 from python_il_sts.utils.error_handling_class import STSProcessError, sts_process_error_strings
@@ -54,25 +53,25 @@ class StsProcess(STSData):
     Attributes:
         _tsl (TslInstrument): TSL instrument class handle.
         _mpm (MpmInstrument): MPM instrument class handle.
-        _spu (SpuDevice): SPU device class handle. Used only for MPM-200, 210 & 210H models
+        _daq (DaqDevice): daq device class handle. Used only for MPM-200, 210 & 210H models
         _ilsts (ILSTS): ILSTS class instance from Santec namespace.
 
     Parameters:
         tsl (TslInstrument): TSL instrument class instance.
         mpm (MpmInstrument): MPM instrument class instance.
-        spu (SpuDevice): SPU device class instance.
+        daq (DaqDevice): DAQ device class instance.
     """
 
     def __init__(self,
                  tsl: TslInstrument,
                  mpm: MpmInstrument,
-                 spu: SpuDevice = None):
+                 daq: DaqDevice = None):
         logger.info("Initializing STS Process class.")
         self._tsl = tsl
         self._mpm = mpm
-        self._spu = spu
-        self._ilsts = ILSTS()
-        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm}, SpuDevice: {spu}")
+        self._daq = daq
+        self._ilsts = PDLSTS()
+        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm}, DaqDevice: {daq}")
 
     @property
     def il_sts(self) -> ILSTS:
@@ -125,7 +124,7 @@ class StsProcess(STSData):
 
     def _rescaling_settings(self):
         logger.info("STS rescaling settings")
-        if self._spu:
+        if self._daq:
             sts_error = self._ilsts.Set_Rescaling_Setting(RescalingMode.Freerun_SPU,
                                                           self._mpm.get_averaging_time(),
                                                           True)
@@ -279,9 +278,9 @@ class StsProcess(STSData):
             # Wait until the TSL is set to "Waiting for trigger" status
             self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
 
-            # Start SPU sampling
-            if self._spu:
-                self._spu.sampling_start()
+            # Start DAQ sampling
+            if self._daq:
+                self._daq.sampling_start()
 
             # Calculate the mpm wait time
             mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.sweep_speed * 1100)
@@ -291,9 +290,9 @@ class StsProcess(STSData):
             # Issue the TSL soft trigger
             self._tsl.soft_trigger()
 
-            # SPU wait for for sweep completion
-            if self._spu:
-                self._spu.sampling_wait()
+            # DAQ wait for for sweep completion
+            if self._daq:
+                self._daq.sampling_wait()
 
             # Wait until the TSL is set to "Standby" status
             self._tsl.wait_for_sweep_status(waiting_time=mpm_wait_time, sweep_status=1)
@@ -359,8 +358,8 @@ class StsProcess(STSData):
             raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         # Get trigger and monitor data
-        if self._spu:
-            trigger, monitor = self._spu.get_sampling_raw_data()
+        if self._daq:
+            trigger, monitor = self._daq.get_sampling_raw_data()
         else:
             # Get the trigger data from the MPM
             trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
@@ -469,8 +468,8 @@ class StsProcess(STSData):
                 raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         # Get trigger and monitor data
-        if self._spu:
-            trigger, monitor = self._spu.get_sampling_raw_data()
+        if self._daq:
+            trigger, monitor = self._daq.get_sampling_raw_data()
         else:
             # Get the trigger data from the MPM
             trigger = self._mpm.get_trigger_data(0)
@@ -507,7 +506,7 @@ class StsProcess(STSData):
 
     def _call_il_data_for_merge(self):
         logger.info("Calling IL merge")
-        error_code = self._ilsts.Cal_IL_Merge(Module_Type.MPM_211)  # Range data merge
+        error_code = self._ilsts.Cal_IL_Merge(ModuleType.MPM_211)  # Range data merge
         if error_code != 0:
             logger.error("Error while performing DUT measurement, ",
                          str(error_code) + ": " + sts_process_error_strings(error_code))
@@ -559,7 +558,7 @@ class StsProcess(STSData):
         self._set_sts_data_struct()
 
         actual_step = 0.0
-        if not self._spu:
+        if not self._daq:
             actual_step = self._tsl.actual_step
 
         # Logging parameters for MPM
@@ -569,15 +568,15 @@ class StsProcess(STSData):
                                          self._tsl.sweep_speed,
                                          actual_step)
 
-        # Logging parameter for SPU(DAQ)
-        if self._spu:
-            self._spu.set_logging_parameters(self._tsl.start_wavelength,
+        # Logging parameter for DAQ(DAQ)
+        if self._daq:
+            self._daq.set_logging_parameters(self._tsl.start_wavelength,
                                              self._tsl.stop_wavelength,
                                              self._tsl.sweep_speed,
                                              self._tsl.actual_step)
 
-            # Pass MPM averaging time to SPU Class
-            self._spu.AveragingTime = self._mpm.get_averaging_time()
+            # Pass MPM averaging time to DAQ Class
+            self._daq.AveragingTime = self._mpm.get_averaging_time()
 
         # Add sleep time for 100ms
         time.sleep(0.1)

@@ -4,9 +4,7 @@ MPM Instrument Class.
 @organization: Santec Holdings Corp.
 """
 
-# Importing from Santec namespace
-from Santec import MPM, CommunicationTerminator
-from Santec.Communication import CommunicationMethod, GPIBConnectType  # Enumeration Class
+from ..drivers.santec_wrapper import MPM, CommunicationTerminator, CommunicationMethod, GPIBConnectType
 
 # Importing instrument error strings
 from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings

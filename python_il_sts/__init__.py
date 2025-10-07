@@ -23,7 +23,7 @@ except Exception as e:
 # Import santec modules
 from .connections.get_address import GetAddress
 from .measurements.sts_process import StsProcess
-from .instruments.daq_device_class import SpuDevice
+from .instruments.daq_device_class import DaqDevice
 from .instruments.tsl_instrument_class import TslInstrument
 from .instruments.mpm_instrument_class import MpmInstrument
 from .utils import file_saving
@@ -33,7 +33,7 @@ __all__ = [
     "StsProcess",
     "TslInstrument",
     "MpmInstrument",
-    "SpuDevice",
+    "DaqDevice",
     "GetAddress",
     "file_saving"
 ]

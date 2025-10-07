@@ -1,15 +1,13 @@
 """
 Get Instrument Addresses.
-Connection modes: GPIB, LAN or USB(only TSL).
+Connection modes: GPIB, LAN or USB (only TSL).
 
 @organization: Santec Holdings Corp.
 """
 
 import pyvisa
 import nidaqmx
-
-# Import Santec communication class from Santec namespace
-from Santec.Communication import MainCommunication
+from ..drivers.santec_wrapper import MainCommunication
 
 # Import program logger
 from python_il_sts.logger import get_logger

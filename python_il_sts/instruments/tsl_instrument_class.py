@@ -4,9 +4,7 @@ TSL Instrument Class.
 @organization: Santec Holdings Corp.
 """
 
-# Importing from Santec namespace
-from Santec import TSL, ExceptionCode, CommunicationTerminator
-from Santec.Communication import CommunicationMethod, GPIBConnectType
+from ..drivers.santec_wrapper import TSL, CommunicationTerminator, CommunicationMethod, GPIBConnectType, ExceptionCode
 
 # Importing instrument error strings
 from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings

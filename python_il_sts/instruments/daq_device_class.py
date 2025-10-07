@@ -4,23 +4,22 @@ DAQ Device Class.
 @organization: Santec Holdings Corp.
 """
 
-# Importing SPU class from the DLL
-from Santec import SPU
+from ..drivers.santec_wrapper import DAQ
 
 # Importing instrument error strings
 from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
 
 # Import program logger
 from python_il_sts.logger import get_logger
-logger = get_logger("Spu Device Class.")
+logger = get_logger("DAQ Device Class.")
 
 
-class SpuDevice:
+class DaqDevice:
     """
-    SPU device class to control and command the DAQ device.
+    DAQ device class to control and command the DAQ device.
 
     Attributes:
-        __spu (SPU): The SPU class from the namespace Santec.
+        __daq (DAQ): The DAQ class from the namespace Santec.
         _device_name (str): The name of the DAQ device.
 
     Parameters:
@@ -31,10 +30,10 @@ class SpuDevice:
     """
     def __init__(self,
                  device_name: str):
-        logger.info("Initializing Spu Instrument class.")
-        self.__spu = SPU()
+        logger.info("Initializing Daq Instrument class.")
+        self.__daq = DAQ()
         self._device_name = device_name
-        logger.info(f"Spu Device details, Device Name: {device_name}")
+        logger.info(f"Daq Device details, Device Name: {device_name}")
 
     def connect(self) -> None:
         """
@@ -43,18 +42,18 @@ class SpuDevice:
         Raises:
             InstrumentError: If the connection fails with an error code.
         """
-        logger.info("Connect Spu device")
-        self.__spu.DeviceName = str(self._device_name)
+        logger.info("Connect DAQ device")
+        self.__daq.DeviceName = str(self._device_name)
         device_answer = None
         try:
-            errorcode, device_answer = self.__spu.Connect("")
+            errorcode, device_answer = self.__daq.Connect("")
             if errorcode != 0:
-                logger.critical("Spu instrument connection error ",
+                logger.critical("DAQ instrument connection error ",
                                 str(errorcode) + ": " + instrument_error_strings(errorcode))
                 raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
         except InstrumentError as e:
             print(f"Error occurred: {e}")
-        logger.info(f"Connected to Spu device. device_answer: {device_answer}")
+        logger.info(f"Connected to DAQ device. device_answer: {device_answer}")
 
     def set_logging_parameters(self,
                                start_wavelength: float,
@@ -62,7 +61,7 @@ class SpuDevice:
                                sweep_speed: float,
                                tsl_actual_step: float) -> None:
         """
-        Set SPU logging parameters for DAQ sampling.
+        Set DAQ logging parameters for DAQ sampling.
 
         Parameters:
             start_wavelength (float): Start wavelength value of the sweep.
@@ -73,38 +72,38 @@ class SpuDevice:
         Raises:
             InstrumentError: If setting the logging parameters to the DAQ device fails.
         """
-        logger.info(f"Set SPU logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
+        logger.info(f"Set DAQ logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
                     f"sweep_speed={sweep_speed}, tsl_actual_step={tsl_actual_step}")
-        errorcode = self.__spu.Set_Sampling_Parameter(start_wavelength,
+        errorcode = self.__daq.Set_Sampling_Parameter(start_wavelength,
                                                       stop_wavelength,
                                                       sweep_speed,
                                                       tsl_actual_step)
 
         if errorcode != 0:
-            logger.error("Error while setting SPU logging params, ",
+            logger.error("Error while setting DAQ logging params, ",
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"SPU logging params set.")
+        logger.info(f"DAQ logging params set.")
 
     def sampling_start(self) -> None:
-        """ Starts the SPU sampling """
-        logger.info("SPU sampling start")
-        errorcode = self.__spu.Sampling_Start()
+        """ Starts the DAQ sampling """
+        logger.info("DAQ sampling start")
+        errorcode = self.__daq.Sampling_Start()
         if errorcode != 0:
-            logger.error("Error while SPU sampling start, ",
+            logger.error("Error while DAQ sampling start, ",
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("SPU sampling started.")
+        logger.info("DAQ sampling started.")
 
     def sampling_wait(self) -> None:
-        """ SPU wait for sampling """
-        logger.info("SPU sampling wait")
-        errorcode = self.__spu.Waiting_for_sampling()
+        """ DAQ wait for sampling """
+        logger.info("DAQ sampling wait")
+        errorcode = self.__daq.Waiting_for_sampling()
         if errorcode != 0:
-            logger.error("Error while SPU sampling wait, ",
+            logger.error("Error while DAQ sampling wait, ",
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("SPU sampling wait done.")
+        logger.info("DAQ sampling wait done.")
 
     def get_sampling_raw_data(self) -> tuple[list[float], list[float]]:
         """
@@ -118,14 +117,14 @@ class SpuDevice:
                 - The first list contains the TSL trigger data of a float type.
                 - The second list contains the power monitor data of a float type.
         """
-        logger.info("SPU get sampling raw data")
-        errorcode, trigger, monitor = self.__spu.Get_Sampling_Rawdata(
+        logger.info("DAQ get sampling raw data")
+        errorcode, trigger, monitor = self.__daq.Get_Sampling_Rawdata(
             None, None)
         if errorcode != 0:
-            logger.error("Error while getting SPU sampling raw data, ",
+            logger.error("Error while getting DAQ sampling raw data, ",
                          str(errorcode) + ": " + instrument_error_strings(errorcode))
             raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"SPU sampling raw data acquired, data length: trigger={len(trigger)}, monitor={len(monitor)}")
+        logger.info(f"DAQ sampling raw data acquired, data length: trigger={len(trigger)}, monitor={len(monitor)}")
         return trigger, monitor
 
     def disconnect(self) -> None:
@@ -136,7 +135,7 @@ class SpuDevice:
               RuntimeError: If disconnecting the DAQ device fails.
         """
         try:
-            self.__spu.DisConnect()
-            logger.info("SPU connection disconnected.")
+            self.__daq.DisConnect()
+            logger.info("DAQ connection disconnected.")
         except RuntimeError as e:
-            logger.error(f"Error while disconnecting the SPU connection, {e}")
+            logger.error(f"Error while disconnecting the DAQ connection, {e}")

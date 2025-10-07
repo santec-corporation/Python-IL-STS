@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
-from python_il_sts import TslInstrument, MpmInstrument, SpuDevice, GetAddress, StsProcess, file_saving
+from python_il_sts import TslInstrument, MpmInstrument, DaqDevice, GetAddress, StsProcess, file_saving
 
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000
@@ -180,7 +180,7 @@ def connection():
     """ Detect and connect to the TSL, MPM and DAQ instruments. """
     tsl: TslInstrument
     mpm: MpmInstrument
-    daq: SpuDevice
+    daq: DaqDevice
 
     device_address = GetAddress()
     device_address.initialize_instruments()
@@ -198,7 +198,7 @@ def connection():
         return tsl, mpm, None
 
     daq_address = device_address.get_daq_address()
-    daq = SpuDevice(device_name=daq_address)
+    daq = DaqDevice(device_name=daq_address)
     daq.connect()
 
     return tsl, mpm, daq
