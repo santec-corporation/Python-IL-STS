@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from ..drivers.santec_wrapper import ILSTS, PDLSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, ModuleType
 
 # Importing instrument classes and sts error strings
-from python_il_sts.instruments.daq_instrument import DaqDevice
+from python_il_sts.instruments.daq_instrument import DaqInstrument
 from python_il_sts.instruments.mpm_instrument import MpmInstrument
 from python_il_sts.instruments.tsl_instrument import TslInstrument
 from python_il_sts.utils.error_handling_class import STSProcessError, sts_process_error_strings
@@ -53,19 +53,19 @@ class StsProcess(STSData):
     Attributes:
         _tsl (TslInstrument): TSL instrument class handle.
         _mpm (MpmInstrument): MPM instrument class handle.
-        _daq (DaqDevice): daq device class handle. Used only for MPM-200, 210 & 210H models
+        _daq (DaqInstrument): daq device class handle. Used only for MPM-200, 210 & 210H models
         _ilsts (ILSTS): ILSTS class instance from Santec namespace.
 
     Parameters:
         tsl (TslInstrument): TSL instrument class instance.
         mpm (MpmInstrument): MPM instrument class instance.
-        daq (DaqDevice): DAQ device class instance.
+        daq (DaqInstrument): DAQ device class instance.
     """
 
     def __init__(self,
                  tsl: TslInstrument,
                  mpm: MpmInstrument,
-                 daq: DaqDevice = None):
+                 daq: DaqInstrument = None):
         logger.info("Initializing STS Process class.")
         self._tsl = tsl
         self._mpm = mpm

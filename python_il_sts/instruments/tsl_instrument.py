@@ -1,18 +1,15 @@
 """
 TSL Instrument Class.
-
-@organization: Santec Holdings Corp.
 """
 
-from ..drivers.santec_wrapper import TSL, CommunicationTerminator, CommunicationMethod, GPIBConnectType, ExceptionCode
+from ..drivers.santec_wrapper import TSL, ExceptionCode
 
 # Importing instrument error strings
-from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
-from python_il_sts.connections.get_address import Instrument
+from ..utils.error_handling_class import InstrumentError, instrument_error_strings
+from .base_instrument import BaseInstrument
 
 # Import program logger
-from python_il_sts.logger import get_logger
-logger = get_logger("TSL Instrument Class.")
+from ..logger import get_logger
 
 
 class TslData:
@@ -44,179 +41,47 @@ class TslData:
     sweep_speed_table: list = []
 
 
-class TslInstrument(TslData):
+class TslInstrument(TslData, BaseInstrument):
     """
     Class to control and command the TSL instrument.
-
-    Attributes:
-        __tsl (TSL): The TSL class from the namespace Santec.
-        interface (str): The TSL instrument interface or connection type.
-                        Example: GPIB, LAN or USB
-        ip_address (str): The connection ip_address of the TSL.
-        port (int): In case of LAN connection, the port number of the TSL.
-        instrument (Instrument): The instrument object in case of GPIB or USB connection.
-        gpib_connect_type (str): In case of GPIB connection, the connection type of the GPIB,
-                                if National Instruments, gpib_connect_type="NI",
-                                if Keysight Instruments, gpib_connect_type="Keysight".
-
-    Parameters:
-        interface (str): The TSL instrument interface or connection type.
-                        Supported types: GPIB, LAN or USB
-        ip_address (str): The ip_address for the instrument, which can be a GPIB ip_address (e.g., 'GPIB::1')
-                    or a LAN ip_address (e.g., '192.168.1.100')
-                    or a USB Address (e.g., 'USB0')
-        port (int): In case of LAN connection, the port number of the TSL.
-                    Default value = 5000.
-        instrument (Instrument): The instrument object in case of GPIB or USB connection.
-        gpib_connect_type (str | optional): In case of GPIB connection, the connection type of the GPIB,
-                                if using National Instruments, gpib_connect_type="NI",
-                                if using Keysight Instruments, gpib_connect_type="Keysight".
-                                Default: "NI"
-
-    Raises:
-        Exception: If the provided interface is not GPIB, LAN or USB.
     """
 
-    def __init__(self,
-                 interface: str = "GPIB",
-                 ip_address: str = "",
-                 port: int = 5000,
-                 instrument: Instrument = None,
-                 gpib_connect_type: str = "ni"):
-        logger.info("Initializing Tsl Instrument class.")
-        self.__tsl = TSL()
-        self.interface = interface.lower()
-        self.ip_address = ip_address
-        self.port = port
-        self.instrument = instrument
-        self.gpib_connect_type = gpib_connect_type.lower()
-        logger.info(f"Tsl Instrument details, Interface: {interface}, Address: {ip_address},"
-                    f" Port: {port}, Instrument:{instrument}, Gpib connect type: {gpib_connect_type}")
-
-        if interface not in ("GPIB", "LAN", "USB"):
-            logger.warning(f"Invalid interface type, this interface {interface} is not supported.")
-            raise Exception(f"This interface {interface} is not supported")
-
-    def __str__(self):
-        return "TslInstrument"
-
-    def check_supported_instruments(self):
-        """
-        Checks if the current instrument is supported based on its product name and interface.
-
-        This method validates the instrument's connection interface against known supported
-        configurations.
-        If the interface is not valid or does not match the requirements for
-        the specified product name, a warning is logged and a RuntimeError is raised.
-
-        Raises:
-            RuntimeError: If the instrument interface is unsupported for the given product name.
-        """
-        if self.interface not in "gpibusb":
-            return
-
-        instrument = self.instrument
-        if instrument.ProductName in ["TSL-510", "TSL-550", "TSL-710"]:
-            if instrument.Interface != "GPIB":
-                logger.warning(f"{instrument.ProductName} is supported via GPIB only.")
-                raise RuntimeError(f"{instrument.ProductName} is supported via GPIB only.")
-
-    def connect(self) -> None:
-        """
-        Establishes connection with the TSL instrument.
-
-        Raises:
-            InstrumentError: If establishing connection fails.
-        """
-        self.check_supported_instruments()
-        communication_type = None
-        logger.info("Connect Tsl instrument")
-
-        if self.instrument is not None:
-            instrument_resource = self.instrument.ResourceValue
-            if "gpib" in self.interface:
-                logger.info("Connect Tsl instrument, type GPIB")
-                self.__tsl.Terminator = CommunicationTerminator.Cr
-                self.__tsl.GPIBBoard = int(instrument_resource.split('::')[0][-1])
-                self.__tsl.GPIBAddress = int(instrument_resource.split('::')[1])
-                if "ni" in self.gpib_connect_type:
-                    self.__tsl.GPIBConnectType = GPIBConnectType.NI4882
-                elif "keysight" in self.gpib_connect_type:
-                    self.__tsl.GPIBConnectType = GPIBConnectType.KeysightIO
-                communication_type = CommunicationMethod.GPIB
-
-            elif "usb" in self.interface:
-                logger.info("Connect Tsl instrument, type USB")
-                self.__tsl.DeviceID = int(instrument_resource[-1])
-                self.__tsl.Terminator = CommunicationTerminator.Cr
-                communication_type = CommunicationMethod.USB
-
-        elif "lan" in self.interface:
-            logger.info("Connect Tsl instrument, type LAN")
-            self.__tsl.Terminator = CommunicationTerminator.Cr
-            self.__tsl.IPAddress = self.ip_address
-            self.__tsl.Port = self.port
-            communication_type = CommunicationMethod.TCPIP
-
-        if communication_type is None:
-            logger.error("TSL instrument not initialized.")
-            raise RuntimeError("TSL instrument not initialized.")
-
-        try:
-            errorcode = self.__tsl.Connect(communication_type)
-            if errorcode != 0:
-                self.__tsl.DisConnect()
-                logger.critical("Tsl instrument connection error ",
-                                str(errorcode) + ": " + instrument_error_strings(errorcode))
-                raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-
-        except InstrumentError as e:
-            raise RuntimeError(f"Error occurred: {e}")
-
-        logger.info("Connected to Tsl instrument.")
-        self.get_spec_wavelength()  # Gets TSL spec wavelength(nm)
-
-        if not self.get_tsl_type_flag():
-            self.get_max_power()
-
-        self.check_laser_diode_status()
-
-    def idn(self) -> str:
-        """ Returns the instrument IDN response. """
-        _, response = self.query("*IDN?")
-        return response
+    def __init__(self):
+        super().__init__()
+        self.logger = get_logger(__class__.__name__)
+        self._instrument = TSL()
 
     def check_laser_diode_status(self) -> int:
         """
         Checks if the TSL laser diode is switched ON, else throws a RuntimeError.
 
         Returns:
-            int: The errorcode of the laser diode status read operation.
-                errorcode = 0, means read operation successful.
-                errorcode != 0, means read operation failed.
+            int: The error_code of the laser diode status read operation.
+                error_code = 0, means read operation successful.
+                error_code != 0, means read operation failed.
 
         Raises:
             InstrumentError: If checking laser diode status fails.
             RuntimeError: If laser diode is not switched ON.
         """
-        logger.info("Checking laser diode status")
+        self.logger.info("Checking laser diode status")
         ld_status = TSL.LD_Status
         status = ld_status.LD_OFF
-        errorcode, status = self.__tsl.Get_LD_Status(status)
-        if errorcode != 0:
-            logger.warning("Error while checking TSL ld status",
-                           str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        error_code, status = self._instrument.Get_LD_Status(status)
+        if error_code != 0:
+            self.logger.warning("Error while checking TSL ld status",
+                           str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
         while status != ld_status.LD_ON:
-            logger.critical("TSL Laser Diode not switched ON.")
+            self.logger.critical("TSL Laser Diode not switched ON.")
             print("\nTSL laser diode not switched ON.")
             print("Please switch ON the laser diode.")
             input("Once the laser diode is switched ON, press Enter...")
 
-            errorcode, status = self.__tsl.Get_LD_Status(status)        # Get the laser diode status
+            error_code, status = self._instrument.Get_LD_Status(status)     # Get the laser diode status
 
-        logger.info("Laser diode ON.")
-        return errorcode
+        self.logger.info("Laser diode ON.")
+        return error_code
 
     def set_laser_diode_status(self, state: str = 'on') -> int:
         """
@@ -226,91 +91,25 @@ class TslInstrument(TslData):
             state (str): State of the laser diode, 'on' or 'off'.
 
         Returns:
-            int: The errorcode of the laser diode status read operation.
-                errorcode = 0, means read operation successful.
-                errorcode != 0, means read operation failed.
+            int: The error_code of the laser diode status read operation.
+                error_code = 0, means read operation successful.
+                error_code != 0, means read operation failed.
 
         Raises:
             InstrumentError: If setting the laser diode fails.
         """
-        logger.info("Setting laser diode status to: %s", state)
+        self.logger.info("Setting laser diode status to: %s", state)
         ld_status = TSL.LD_Status
         status = ld_status.LD_ON
         if 'off' in state.lower():
             status = ld_status.LD_OFF
-        errorcode = self.__tsl.Set_LD_Status(status)
-        if errorcode != 0:
-            logger.warning("Error while setting TSL ld status",
-                           str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("Laser diode status set to: %s", state)
-        return errorcode
-
-    def query(self, command: str) -> tuple[int, str]:
-        """
-        Queries the TSL instrument with a command,
-        and returns the read data from the instrument buffer.
-
-        Parameters:
-            command (str): The command to query to the TSL.
-
-        Returns:
-              tuple[int, str]:
-                - int: status value of the query operation.
-                - str: read value of the buffer.
-
-        Raises:
-             RuntimeError: If the query operation fails.
-        """
-        command = command.upper()
-        logger.info(f"Querying TSL, command: {command}")
-        try:
-            status, response = self.__tsl.Echo(command, "")
-            return status, response
-        except Exception as e:
-            logger.error(f"Failed to query TSL with command '{command}': {e}")
-            raise RuntimeError(f"query_tsl failed: {e}")
-
-    def write(self, command: str) -> int:
-        """
-        Writes a command to the TSL instrument.
-
-        Parameters:
-            command (str): The command to write to the TSL.
-
-        Returns:
-              int: status value of the write operation.
-
-        Raises:
-             RuntimeError: If the write operation fails.
-        """
-        command = command.upper()
-        logger.info(f"Writing to TSL, command: {command}")
-        try:
-            status = self.__tsl.Write(command)
-            return status
-        except Exception as e:
-            logger.error(f"Failed to write to TSL with command '{command}': {e}")
-            raise RuntimeError(f"write_tsl failed: {e}")
-
-    def read(self) -> tuple[int, str]:
-        """
-        Reads data from the TSL instrument buffer.
-
-        Returns:
-              tuple[int, str]:
-                - int: status value of the read operation.
-                - str: read value of the buffer.
-
-        Raises:
-             RuntimeError: If the read operation fails.
-        """
-        try:
-            status, response = self.__tsl.Read("")
-            return status, response
-        except Exception as e:
-            logger.error(f"Failed to read TSL, {e}")
-            raise RuntimeError(f"read_tsl failed: {e}")
+        error_code = self._instrument.Set_LD_Status(status)
+        if error_code != 0:
+            self.logger.warning("Error while setting TSL ld status",
+                           str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("Laser diode status set to: %s", state)
+        return error_code
 
     def get_tsl_type_flag(self) -> bool:
         """
@@ -321,9 +120,9 @@ class TslInstrument(TslData):
             bool: True if TSL-510, TSL-550 or TSL-710,
                   else False.
         """
-        logger.info("Get TSL name")
-        tsl_name = self.__tsl.Information.ProductName
-        logger.info(f"TSL name: {tsl_name}")
+        self.logger.info("Get TSL name")
+        tsl_name = self._instrument.Information.ProductName
+        self.logger.info(f"TSL name: {tsl_name}")
         return tsl_name in ("TSL-510", "TSL-550", "TSL-710")
 
     def get_spec_wavelength(self) -> None:
@@ -333,14 +132,14 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case, could not get the spec min and max wavelengths from the TSL.
         """
-        logger.info("Get TSL spec wavelength")
-        errorcode, self.spec_min_wav, self.spec_max_wav = self.__tsl.Get_Spec_Wavelength(0, 0)
+        self.logger.info("Get TSL spec wavelength")
+        error_code, self.spec_min_wav, self.spec_max_wav = self._instrument.Get_Spec_Wavelength(0, 0)
 
-        logger.info(f"TSL spec wavelength: min_wav={self.spec_min_wav}, max_wav={self.spec_max_wav}")
-        if errorcode != 0:
-            logger.warning("Error while getting TSL spec wavelength",
-                           str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        self.logger.info(f"TSL spec wavelength: min_wav={self.spec_min_wav}, max_wav={self.spec_max_wav}")
+        if error_code != 0:
+            self.logger.warning("Error while getting TSL spec wavelength",
+                           str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
     def get_sweep_speed_table(self) -> list[float]:
         """
@@ -357,23 +156,23 @@ class TslInstrument(TslData):
         Returns:
             list[float]: Table of sweep speeds allowed by the TSL-570.
         """
-        logger.info("Get TSL speed table")
-        errorcode, table = self.__tsl.Get_Sweep_Speed_table(None)
+        self.logger.info("Get TSL speed table")
+        error_code, table = self._instrument.Get_Sweep_Speed_table(None)
         self.sweep_speed_table = []
 
         # This function only supports "TSL-570"
-        # When other TSL connected, errorcode return "DeviceError"
-        if errorcode == ExceptionCode.DeviceError:
-            errorcode = 0
+        # When other TSL connected, error_code return "DeviceError"
+        if error_code == ExceptionCode.DeviceError:
+            error_code = 0
         else:
             for item in table:
                 self.sweep_speed_table.append(item)
 
-        if errorcode != 0:
-            logger.error("Error while getting TSL speed table",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("TSL speed table received.")
+        if error_code != 0:
+            self.logger.error("Error while getting TSL speed table",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("TSL speed table received.")
         return self.sweep_speed_table
 
     def get_max_power(self) -> None:
@@ -386,19 +185,19 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case TSL doesn't return a value.
         """
-        logger.info("Get TSL max power.")
-        errorcode, self.max_power = self.__tsl.Get_APC_Limit_for_Sweep(self.spec_min_wav,
+        self.logger.info("Get TSL max power.")
+        error_code, self.max_power = self._instrument.Get_APC_Limit_for_Sweep(self.spec_min_wav,
                                                                        self.spec_max_wav,
                                                                        0.0)
-        if errorcode == ExceptionCode.DeviceError:
+        if error_code == ExceptionCode.DeviceError:
             self.max_power = 999
-            errorcode = 0
-        logger.info(f"TSL max power: {self.max_power}")
+            error_code = 0
+        self.logger.info(f"TSL max power: {self.max_power}")
 
-        if errorcode != 0:
-            logger.error("Error while getting TSL max power",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error("Error while getting TSL max power",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
     def get_power_logging_data(self) -> list[float]:
         """
@@ -410,14 +209,14 @@ class TslInstrument(TslData):
         Returns:
             list[float]: List of power logging data.
         """
-        logger.info("TSL get power logging data.")
-        errorcode, log_count, monitor = self.__tsl.Get_Logging_Data_Power_for_STS(self.sweep_speed,
+        self.logger.info("TSL get power logging data.")
+        error_code, log_count, monitor = self._instrument.Get_Logging_Data_Power_for_STS(self.sweep_speed,
                                                                                   self.actual_step, 0, None)
-        if errorcode not in [0, -2]:
-            logger.error("Error while getting TSL power logging data, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"TSL power logging data acquired, data length={len(monitor)}")
+        if error_code not in [0, -2]:
+            self.logger.error("Error while getting TSL power logging data, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"TSL power logging data acquired, data length={len(monitor)}")
         return monitor
 
     def set_power(self, power: float) -> None:
@@ -431,19 +230,19 @@ class TslInstrument(TslData):
             InstrumentError: If setting the output power is fails.
             InstrumentError: If the TSL is busy.
         """
-        logger.info(f"Set TSL power: {power}")
+        self.logger.info(f"Set TSL power: {power}")
         self.power = power
-        errorcode = self.__tsl.Set_APC_Power_dBm(self.power)
+        error_code = self._instrument.Set_APC_Power_dBm(self.power)
 
-        if errorcode != 0:
-            logger.error(f"Error while setting TSL power", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error(f"Error while setting TSL power", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-        errorcode = self.__tsl.TSL_Busy_Check(3000)
+        error_code = self._instrument.TSL_Busy_Check(3000)
 
-        if errorcode != 0:
-            logger.error(f"Error while setting TSL power", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error(f"Error while setting TSL power", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
     def set_wavelength(self, wavelength: float) -> None:
         """
@@ -456,20 +255,20 @@ class TslInstrument(TslData):
             InstrumentError: If setting the wavelength is fails.
             InstrumentError: If the TSL is busy.
         """
-        logger.info(f"Set TSL wavelength: {wavelength}")
-        errorcode = self.__tsl.Set_Wavelength(wavelength)
+        self.logger.info(f"Set TSL wavelength: {wavelength}")
+        error_code = self._instrument.Set_Wavelength(wavelength)
 
-        if errorcode != 0:
-            logger.error(f"Error while setting TSL wavelength",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error(f"Error while setting TSL wavelength",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-        errorcode = self.__tsl.TSL_Busy_Check(3000)
+        error_code = self._instrument.TSL_Busy_Check(3000)
 
-        if errorcode != 0:
-            logger.error(f"Error while setting TSL wavelength",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error(f"Error while setting TSL wavelength",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
     def set_sweep_parameters(self,
                              start_wavelength: float,
@@ -488,7 +287,7 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: If setting the TSL sweep parameters fails.
         """
-        logger.info(f"Set TSL sweep params: start_wavelength={start_wavelength}, "
+        self.logger.info(f"Set TSL sweep params: start_wavelength={start_wavelength}, "
                     f"stop_wavelength={stop_wavelength}, sweep_step={sweep_step}, sweep_speed={sweep_speed}")
         self.start_wavelength = start_wavelength
         self.stop_wavelength = stop_wavelength
@@ -497,19 +296,19 @@ class TslInstrument(TslData):
         self.sweep_speed = sweep_speed
         self.tsl_busy_check()
 
-        errorcode, self.actual_step = self.__tsl.Set_Sweep_Parameter_for_STS(self.start_wavelength,
+        error_code, self.actual_step = self._instrument.Set_Sweep_Parameter_for_STS(self.start_wavelength,
                                                                              self.stop_wavelength,
                                                                              self.sweep_speed,
                                                                              self.sweep_step,
                                                                              0)
 
-        if errorcode != 0:
-            logger.error("Error while setting TSL sweep params",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
+        if error_code != 0:
+            self.logger.error("Error while setting TSL sweep params",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-        logger.info(f"TSL sweep params set, actual_step={self.actual_step}")
-        self.__tsl.Set_Wavelength(self.average_wavelength)
+        self.logger.info(f"TSL sweep params set, actual_step={self.actual_step}")
+        self._instrument.Set_Wavelength(self.average_wavelength)
         self.tsl_busy_check(5000)
 
     def soft_trigger(self) -> None:
@@ -519,14 +318,14 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case TSL is not in Standby mode, or if TSL cannot start the sweep.
         """
-        logger.info("Issue soft trigger")
-        errorcode = self.__tsl.Set_Software_Trigger()
+        self.logger.info("Issue soft trigger")
+        error_code = self._instrument.Set_Software_Trigger()
 
-        if errorcode != 0:
-            logger.error("Error while setting TSL soft trigger",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("Issue soft trigger done.")
+        if error_code != 0:
+            self.logger.error("Error while setting TSL soft trigger",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("Issue soft trigger done.")
 
     def start_sweep(self) -> None:
         """
@@ -536,14 +335,14 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case TSL doesn't start the sweep.
         """
-        logger.info("TSL start sweep")
-        errorcode = self.__tsl.Sweep_Start()
+        self.logger.info("TSL start sweep")
+        error_code = self._instrument.Sweep_Start()
 
-        if errorcode != 0:
-            logger.error("Error while starting TSL sweep",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("TSL start sweep done.")
+        if error_code != 0:
+            self.logger.error("Error while starting TSL sweep",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("TSL start sweep done.")
 
     def stop_sweep(self, except_if_error: bool = True):
         """
@@ -559,14 +358,14 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case of failure in stopping the TSL sweep.
         """
-        logger.info("TSL stop sweep")
-        errorcode = self.__tsl.Sweep_Stop()
+        self.logger.info("TSL stop sweep")
+        error_code = self._instrument.Sweep_Stop()
 
-        if errorcode != 0 and except_if_error is True:
-            logger.error("Error while stopping TSL sweep",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("TSL stop sweep done.")
+        if error_code != 0 and except_if_error is True:
+            self.logger.error("Error while stopping TSL sweep",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("TSL stop sweep done.")
 
     def tsl_busy_check(self, time_out: int = 3000) -> None:
         """
@@ -576,14 +375,14 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case, no response from TSL after timeout.
         """
-        logger.info("TSL busy check")
-        errorcode = self.__tsl.TSL_Busy_Check(time_out)
+        self.logger.info("TSL busy check")
+        error_code = self._instrument.TSL_Busy_Check(time_out)
 
-        if errorcode != 0:
-            logger.error("Error while TSL busy check",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("TSL busy check done.")
+        if error_code != 0:
+            self.logger.error("Error while TSL busy check",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("TSL busy check done.")
 
     def wait_for_sweep_status(self,
                               waiting_time: int,
@@ -605,31 +404,18 @@ class TslInstrument(TslData):
         Raises:
             InstrumentError: In case TSL is not set to the specified sweep status after timeout.
         """
-        logger.info("TSL wait for sweep status")
+        self.logger.info("TSL wait for sweep status")
         _status = {
-            1: self.__tsl.Sweep_Status.Standby,
-            2: self.__tsl.Sweep_Status.Running,
-            3: self.__tsl.Sweep_Status.Pausing,
-            4: self.__tsl.Sweep_Status.WaitingforTrigger,
-            5: self.__tsl.Sweep_Status.Returning
+            1: self._instrument.Sweep_Status.Standby,
+            2: self._instrument.Sweep_Status.Running,
+            3: self._instrument.Sweep_Status.Pausing,
+            4: self._instrument.Sweep_Status.WaitingforTrigger,
+            5: self._instrument.Sweep_Status.Returning
         }
-        errorcode = self.__tsl.Waiting_For_Sweep_Status(waiting_time, _status[sweep_status])
+        error_code = self._instrument.Waiting_For_Sweep_Status(waiting_time, _status[sweep_status])
 
-        if errorcode != 0:
-            logger.error("Error while TSL wait for sweep status",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("TSL wait for sweep status done.")
-
-    def disconnect(self) -> None:
-        """
-        Disconnects the connection from the TSL instrument.
-
-        Raises:
-              RuntimeError: If disconnecting the TSL instrument fails.
-        """
-        try:
-            self.__tsl.DisConnect()
-            logger.info("TSL connection disconnected.")
-        except RuntimeError as e:
-            logger.error(f"Error while disconnecting the TSL connection, {e}")
+        if error_code != 0:
+            self.logger.error("Error while TSL wait for sweep status",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("TSL wait for sweep status done.")

@@ -5,10 +5,10 @@ Created on Wed 05 17:17:26 2024
 """
 
 # Importing high-level santec package and its modules
-from python_il_sts import TslInstrument, MpmInstrument, GetAddress
+from python_il_sts import TslInstrument, MpmInstrument, GetInstruments
 
 # Initializing get instrument address class
-device_address = GetAddress()
+device_address = GetInstruments()
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     tsl: TslInstrument
     mpm: MpmInstrument
 
-    device_address.initialize_instruments()
+    device_address.list_instruments()
     tsl_address = device_address.get_tsl_address()
     mpm_address = device_address.get_mpm_address()
 

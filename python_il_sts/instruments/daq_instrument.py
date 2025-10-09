@@ -1,59 +1,27 @@
 """
-DAQ Device Class.
-
-@organization: Santec Holdings Corp.
+DAQ Instrument.
 """
 
+# Import DAQ class from the Santec DLL
 from ..drivers.santec_wrapper import DAQ
 
 # Importing instrument error strings
-from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
+from ..utils import InstrumentError, instrument_error_strings
+
+from .base_instrument import BaseInstrument
 
 # Import program logger
-from python_il_sts.logger import get_logger
-logger = get_logger("DAQ Device Class.")
+from ..logger import get_logger
 
 
-class DaqDevice:
+class DaqInstrument(BaseInstrument):
     """
-    DAQ device class to control and command the DAQ device.
-
-    Attributes:
-        __daq (DAQ): The DAQ class from the namespace Santec.
-        _device_name (str): The name of the DAQ device.
-
-    Parameters:
-        device_name (str): The name of the DAQ device.
-
-    Raises:
-        None
+    DAQ instrument class to control and command the DAQ device.
     """
-    def __init__(self,
-                 device_name: str):
-        logger.info("Initializing Daq Instrument class.")
-        self.__daq = DAQ()
-        self._device_name = device_name
-        logger.info(f"Daq Device details, Device Name: {device_name}")
-
-    def connect(self) -> None:
-        """
-        Establishes connection with a DAQ board.
-
-        Raises:
-            InstrumentError: If the connection fails with an error code.
-        """
-        logger.info("Connect DAQ device")
-        self.__daq.DeviceName = str(self._device_name)
-        device_answer = None
-        try:
-            errorcode, device_answer = self.__daq.Connect("")
-            if errorcode != 0:
-                logger.critical("DAQ instrument connection error ",
-                                str(errorcode) + ": " + instrument_error_strings(errorcode))
-                raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        except InstrumentError as e:
-            print(f"Error occurred: {e}")
-        logger.info(f"Connected to DAQ device. device_answer: {device_answer}")
+    def __init__(self):
+        super().__init__()
+        self.logger = get_logger(__class__.__name__)
+        self._instrument = DAQ()
 
     def set_logging_parameters(self,
                                start_wavelength: float,
@@ -72,38 +40,38 @@ class DaqDevice:
         Raises:
             InstrumentError: If setting the logging parameters to the DAQ device fails.
         """
-        logger.info(f"Set DAQ logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
+        self.logger.info(f"Set DAQ logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
                     f"sweep_speed={sweep_speed}, tsl_actual_step={tsl_actual_step}")
-        errorcode = self.__daq.Set_Sampling_Parameter(start_wavelength,
-                                                      stop_wavelength,
-                                                      sweep_speed,
-                                                      tsl_actual_step)
+        error_code = self._instrument.Set_Sampling_Parameter(start_wavelength,
+                                                            stop_wavelength,
+                                                            sweep_speed,
+                                                            tsl_actual_step)
 
-        if errorcode != 0:
-            logger.error("Error while setting DAQ logging params, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"DAQ logging params set.")
+        if error_code != 0:
+            self.logger.error("Error while setting DAQ logging params, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"DAQ logging params set.")
 
     def sampling_start(self) -> None:
         """ Starts the DAQ sampling """
-        logger.info("DAQ sampling start")
-        errorcode = self.__daq.Sampling_Start()
-        if errorcode != 0:
-            logger.error("Error while DAQ sampling start, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("DAQ sampling started.")
+        self.logger.info("DAQ sampling start")
+        error_code = self._instrument.Sampling_Start()
+        if error_code != 0:
+            self.logger.error("Error while DAQ sampling start, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("DAQ sampling started.")
 
     def sampling_wait(self) -> None:
         """ DAQ wait for sampling """
-        logger.info("DAQ sampling wait")
-        errorcode = self.__daq.Waiting_for_sampling()
-        if errorcode != 0:
-            logger.error("Error while DAQ sampling wait, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("DAQ sampling wait done.")
+        self.logger.info("DAQ sampling wait")
+        error_code = self._instrument.Waiting_for_sampling()
+        if error_code != 0:
+            self.logger.error("Error while DAQ sampling wait, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("DAQ sampling wait done.")
 
     def get_sampling_raw_data(self) -> tuple[list[float], list[float]]:
         """
@@ -117,25 +85,12 @@ class DaqDevice:
                 - The first list contains the TSL trigger data of a float type.
                 - The second list contains the power monitor data of a float type.
         """
-        logger.info("DAQ get sampling raw data")
-        errorcode, trigger, monitor = self.__daq.Get_Sampling_Rawdata(
+        self.logger.info("DAQ get sampling raw data")
+        error_code, trigger, monitor = self._instrument.Get_Sampling_Rawdata(
             None, None)
-        if errorcode != 0:
-            logger.error("Error while getting DAQ sampling raw data, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"DAQ sampling raw data acquired, data length: trigger={len(trigger)}, monitor={len(monitor)}")
+        if error_code != 0:
+            self.logger.error("Error while getting DAQ sampling raw data, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"DAQ sampling raw data acquired, data length: trigger={len(trigger)}, monitor={len(monitor)}")
         return trigger, monitor
-
-    def disconnect(self) -> None:
-        """
-        Disconnects the connection from the DAQ device.
-
-        Raises:
-              RuntimeError: If disconnecting the DAQ device fails.
-        """
-        try:
-            self.__daq.DisConnect()
-            logger.info("DAQ connection disconnected.")
-        except RuntimeError as e:
-            logger.error(f"Error while disconnecting the DAQ connection, {e}")

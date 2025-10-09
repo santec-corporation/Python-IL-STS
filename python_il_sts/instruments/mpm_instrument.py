@@ -1,18 +1,14 @@
 """
 MPM Instrument Class.
-
-@organization: Santec Holdings Corp.
 """
 
-from ..drivers.santec_wrapper import MPM, CommunicationTerminator, CommunicationMethod, GPIBConnectType
+from ..drivers.santec_wrapper import MPM
 
 # Importing instrument error strings
-from python_il_sts.utils.error_handling_class import InstrumentError, instrument_error_strings
-from python_il_sts.connections.get_address import Instrument
+from ..utils.error_handling_class import InstrumentError, instrument_error_strings
 
 # Import program logger
-from python_il_sts.logger import get_logger
-logger = get_logger("MPM Instrument Class.")
+from ..logger import get_logger
 
 
 class ModuleData:
@@ -60,176 +56,12 @@ class MpmData:
 class MpmInstrument(MpmData):
     """
     A class to represent the data for an MPM.
-
-    Attributes:
-        __mpm (MPM): The MPM class from the namespace Santec.
-        interface (str): The MPM instrument interface or connection type.
-                        Example: GPIB or LAN
-        ip_address (str): The connection ip_address of the MPM.
-        port (int): In case of LAN connection, the port number of the MPM.
-        instrument (Instrument): The instrument object in case of GPIB or USB connection.
-        gpib_connect_type (str): In case of GPIB connection, the connection type of the GPIB,
-                                if National Instruments, gpib_connect_type="NI",
-                                if Keysight Instruments, gpib_connect_type="Keysight".
-
-    Parameters:
-        interface (str): The TSL instrument interface or connection type.
-                        Supported types: GPIB, LAN or USB
-        ip_address (str): The ip_address for the instrument, which can be a GPIB ip_address (e.g., 'GPIB0::10::INSTR')
-                    or a LAN ip_address (e.g., '192.168.1.100').
-        port (int): In case of LAN connection, the port number of the TSL.
-                    Default value = 5000.
-        instrument (Instrument): The instrument object in case of GPIB or USB connection.
-        gpib_connect_type (str | optional): In case of GPIB connection, the connection type of the GPIB,
-                                if using National Instruments, gpib_connect_type="NI",
-                                if using Keysight Instruments, gpib_connect_type="Keysight".
-                                Default: "ni"
-
-    Raises:
-        Exception: If the provided interface is not GPIB or LAN.
     """
 
-    def __init__(self,
-                 interface: str = "GPIB",
-                 ip_address: str = "",
-                 port: int = 5000,
-                 instrument: Instrument = None,
-                 gpib_connect_type: str = "ni"):
-
-        logger.info("Initializing Mpm Instrument class.")
-        self.__mpm = MPM()
-        self.interface = interface.lower()
-        self.ip_address = ip_address
-        self.port = port
-        self.instrument = instrument
-        self.gpib_connect_type = gpib_connect_type.lower()
-
-        logger.info(f"Mpm Instrument details, Interface: {interface}, Address: {ip_address},"
-                    f" Port: {port}, Instrument:{instrument}, Gpib connect type: {gpib_connect_type}")
-
-        if interface not in ("GPIB", "LAN"):
-            logger.warning(f"Invalid interface type, this interface {interface} is not supported.")
-            raise Exception(f"This interface {interface} is not supported.")
-
-    def __str__(self):
-        return "MpmInstrument"
-
-    def connect(self) -> None:
-        """
-        Method handling the connection protocol of the MPM.
-
-        Raises:
-            RuntimeError: In case failed to connect to the MPM.
-        """
-        communication_type = None
-        logger.info("Connect Mpm instrument")
-
-        if self.instrument is not None:
-            instrument_resource = self.instrument.ResourceValue
-            if "gpib" in self.interface:
-                self.__mpm.Terminator = CommunicationTerminator.Lf
-                self.__mpm.GPIBBoard = int(instrument_resource.split('::')[0][-1])
-                self.__mpm.GPIBAddress = int(instrument_resource.split('::')[1])
-                if "ni" in self.gpib_connect_type:
-                    self.__mpm.GPIBConnectType = GPIBConnectType.NI4882
-                elif "keysight" in self.gpib_connect_type:
-                    self.__mpm.GPIBConnectType = GPIBConnectType.KeysightIO
-                communication_type = CommunicationMethod.GPIB
-
-        elif "lan" in self.interface:
-            self.__mpm.IPAddress = self.ip_address
-            self.__mpm.Port = self.port  # Default Port = 5000.
-            self.__mpm.TimeOut = 5000  # timeout value for MPM
-            communication_type = CommunicationMethod.TCPIP
-
-        if communication_type is None:
-            logger.error("MPM instrument not initialized.")
-            raise RuntimeError("MPM instrument not initialized.")
-
-        try:
-            errorcode = self.__mpm.Connect(communication_type)  # Establish the connection
-
-            if errorcode != 0:
-                self.__mpm.DisConnect()
-                logger.critical("Mpm instrument connection error, ",
-                                str(errorcode) + ": " + instrument_error_strings(errorcode))
-                raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-
-        except InstrumentError as e:
-            raise RuntimeError(f"Error occurred: {e}")
-
-        logger.info("Connected to Mpm instrument.")
-
-    def idn(self) -> str:
-        """ Returns the instrument IDN response. """
-        _, response = self.query("*IDN?")
-        return response
-
-    def query(self, command: str) -> tuple[int, str]:
-        """
-        Queries the MPM instrument with a command,
-        and returns the read data from the instrument buffer.
-
-        Parameters:
-            command (str): The command to query to the MPM.
-
-        Returns:
-              tuple[int, str]:
-                - int: status value of the query operation.
-                - str: read value of the buffer.
-
-        Raises:
-             RuntimeError: If the query operation fails.
-        """
-        command = command.upper()
-        logger.info(f"Querying MPM, command: {command}")
-        try:
-            status, response = self.__mpm.Echo(command, "")
-            return status, response
-        except Exception as e:
-            logger.error(f"Failed to query MPM with command '{command}': {e}")
-            raise RuntimeError(f"query_mpm failed: {e}")
-
-    def write(self, command: str) -> int:
-        """
-        Writes a command to the MPM instrument.
-
-        Parameters:
-            command (str): The command to write to the MPM.
-
-        Returns:
-              int: status value of the write operation.
-
-        Raises:
-             RuntimeError: If the write operation fails.
-        """
-        command = command.upper()
-        logger.info(f"Writing to MPM, command: {command}")
-        try:
-            status = self.__mpm.Write(command)
-            return status
-        except Exception as e:
-            logger.error(f"Failed to write to MPM with command '{command}': {e}")
-            raise RuntimeError(f"write_mpm failed: {e}")
-
-    def read(self) -> tuple[int, str]:
-        """
-        Reads data from the MPM instrument buffer.
-
-        Returns:
-              tuple[int, str]:
-                - int: status value of the read operation.
-                - str: read value of the buffer.
-
-        Raises:
-             RuntimeError: If the read operation fails.
-        """
-        try:
-            status, response = self.__mpm.Read("")
-            return status, response
-        except Exception as e:
-            logger.error(f"Failed to read MPM, {e}")
-            raise RuntimeError(f"read_mpm failed: {e}")
+    def __init__(self):
+        
+        self.logger = get_logger(__class__.__name__)
+        self._instrument = MPM()
 
     def get_modules(self) -> list:
         """
@@ -244,21 +76,21 @@ class MpmInstrument(MpmData):
         Returns:
             list: A list of the MPM modules.
         """
-        logger.info("Get the MPM modules")
+        self.logger.info("Get the MPM modules")
 
         for slot_count in range(5):
-            module_info = self.__mpm.Information.ModuleType[slot_count]
-            if self.__mpm.Information.ModuleEnable[slot_count] is True:
-                if self.check_mpm_212(slot_count) is True:
+            module_info = self._instrument.Information.ModuleType[slot_count]
+            if self._instrument.Information.ModuleEnable[slot_count] is True:
+                if self.check_mpm_212(slot_count):
                     self.modules.append(ModuleData(slot_count, "MPM-212", [1, 2]))
                 else:
                     self.modules.append(ModuleData(slot_count, module_info, [1, 2, 3, 4]))
             else:
                 self.modules.append(ModuleData(slot_count, None, []))
         if len(self.modules) == 0:
-            logger.warning("No MPM modules were detected.")
+            self.logger.warning("No MPM modules were detected.")
             raise Exception("No modules were detected.")
-        logger.info(f"Detected MPM modules: {self.modules}")
+        self.logger.info(f"Detected MPM modules: {self.modules}")
         return self.modules
 
     def check_module_type(self) -> tuple[bool, bool]:
@@ -272,24 +104,24 @@ class MpmInstrument(MpmData):
         Returns:
             tuple[bool, bool]: True, True if the MPM-215 and MPM-213 modules are detected.
         """
-        logger.info("MPM check module type")
+        self.logger.info("MPM check module type")
         flag_215 = False
         flag_213 = False
         slot = 0
         count_215 = 0
 
         for slot_count in range(5):
-            if self.__mpm.Information.ModuleEnable[slot_count] is True:
+            if self._instrument.Information.ModuleEnable[slot_count] is True:
                 flag_215 = self.check_mpm_215(slot_count)
                 flag_213 = self.check_mpm_213(slot_count)
                 slot += 1
-                if flag_215 is True:
+                if flag_215:
                     count_215 += 1
 
         if flag_215 is True and count_215 != slot:
-            logger.error("MPM-215 can't use with other modules.")
+            self.logger.error("MPM-215 can't use with other modules.")
             raise Exception("MPM-215 can't use with other modules.")
-        logger.info(f"MPM module type check: flag_215={flag_215}, flag_213={flag_213}")
+        self.logger.info(f"MPM module type check: flag_215={flag_215}, flag_213={flag_213}")
         return flag_215, flag_213
 
     def check_mpm_215(self, slot_num: int) -> bool:
@@ -302,9 +134,9 @@ class MpmInstrument(MpmData):
         Returns:
             bool: True if an MPM-215 is detected.
         """
-        logger.info("MPM check if module 215")
-        check = bool(self.__mpm.Information.ModuleType[slot_num] == "MPM-215")
-        logger.info(f"MPM module 215: {check}")
+        self.logger.info("MPM check if module 215")
+        check = bool(self._instrument.Information.ModuleType[slot_num] == "MPM-215")
+        self.logger.info(f"MPM module 215: {check}")
         return check
 
     def check_mpm_213(self, slot_number: int) -> bool:
@@ -317,9 +149,9 @@ class MpmInstrument(MpmData):
         Returns:
             bool: True if an MPM-213 is detected.
         """
-        logger.info("MPM check if module 213")
-        check = bool(self.__mpm.Information.ModuleType[slot_number] == "MPM-213")
-        logger.info(f"MPM module 213: {check}")
+        self.logger.info("MPM check if module 213")
+        check = bool(self._instrument.Information.ModuleType[slot_number] == "MPM-213")
+        self.logger.info(f"MPM module 213: {check}")
         return check
 
     def check_mpm_212(self, slot_number: int) -> bool:
@@ -332,9 +164,9 @@ class MpmInstrument(MpmData):
         Returns:
             bool: True if an MPM-212 is detected.
         """
-        logger.info("MPM check if module 212")
-        check = bool(self.__mpm.Information.ModuleType[slot_number] == "MPM-212")
-        logger.info(f"MPM module 212: {check}")
+        self.logger.info("MPM check if module 212")
+        check = bool(self._instrument.Information.ModuleType[slot_number] == "MPM-212")
+        self.logger.info(f"MPM module 212: {check}")
         return check
 
     def get_range(self) -> None:
@@ -349,16 +181,16 @@ class MpmInstrument(MpmData):
                     if module MPM-213: [1,2,3,4],
                     if other modules: [1,2,3,4,5]
         """
-        logger.info("MPM get dynamic ranges of modules")
+        self.logger.info("MPM get dynamic ranges of modules")
         self.range_data = []
-        if self.check_mpm_215 is True:
+        if self.check_mpm_215:
             self.range_data = [1]
-        elif self.check_mpm_213 is True:
+        elif self.check_mpm_213:
             # 213 have 4 ranges
             self.range_data = [1, 2, 3, 4]
         else:
             self.range_data = [1, 2, 3, 4, 5]
-        logger.info(f"MPM dynamic_range data: {self.range_data}")
+        self.logger.info(f"MPM dynamic_range data: {self.range_data}")
 
     def set_range(self, power_range: int) -> None:
         """
@@ -375,53 +207,53 @@ class MpmInstrument(MpmData):
                             or in case the wrong value for power_range is entered,
                             or if setting MPM dynamic_range fails.
         """
-        logger.info("MPM set dynamic_range")
-        errorcode = self.__mpm.Set_Range(power_range)
+        self.logger.info("MPM set dynamic_range")
+        error_code = self._instrument.Set_Range(power_range)
 
-        if errorcode != 0:
-            logger.error("Error while setting MPM dynamic_range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("MPM dynamic_range set.")
+        if error_code != 0:
+            self.logger.error("Error while setting MPM dynamic_range, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("MPM dynamic_range set.")
 
     def set_channel_range(self, slot_number: int, channel_number: int, range_value: int) -> None:
         """
         Sets the dynamic dynamic_range value of the MPM channel.
         """
-        logger.info("MPM set channel dynamic_range")
-        errorcode = self.__mpm.Set_Range_Each_Channel(slot_number, channel_number, range_value)
+        self.logger.info("MPM set channel dynamic_range")
+        error_code = self._instrument.Set_Range_Each_Channel(slot_number, channel_number, range_value)
 
-        if errorcode != 0:
-            logger.error("Error while setting MPM channel dynamic_range, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM channel dynamic_range set to {range_value}.")
+        if error_code != 0:
+            self.logger.error("Error while setting MPM channel dynamic_range, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM channel dynamic_range set to {range_value}.")
 
     def set_read_range_mode(self, mode: str = "AUTO") -> None:
         """
         Sets the dynamic dynamic_range mode of the MPM.
         """
-        logger.info("MPM set dynamic_range mode.")
+        self.logger.info("MPM set dynamic_range mode.")
         if mode == "AUTO":
-            errorcode = self.__mpm.Set_READ_Range_Mode(MPM.READ_Range_Mode.Auto)
+            error_code = self._instrument.Set_READ_Range_Mode(MPM.READ_Range_Mode.Auto)
         else:
             return
 
-        if errorcode != 0:
-            logger.error("Error while setting MPM dynamic_range mode, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM dynamic_range mode set to {mode}.")
+        if error_code != 0:
+            self.logger.error("Error while setting MPM dynamic_range mode, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM dynamic_range mode set to {mode}.")
 
     def get_read_power_channel(self, slot_number: int, channel_number: int) -> float:
         """ Gets the read power of a channel."""
-        logger.info("MPM Get_READ_Power_Channel.")
-        errorcode, power = self.__mpm.Get_READ_Power_Channel(slot_number, channel_number, 0)
+        self.logger.info("MPM Get_READ_Power_Channel.")
+        error_code, power = self._instrument.Get_READ_Power_Channel(slot_number, channel_number, 0)
 
-        if errorcode != 0:
-            logger.error("Error while Get_READ_Power_Channel, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM Get_READ_Power_Channel, power: {power}.")
+        if error_code != 0:
+            self.logger.error("Error while Get_READ_Power_Channel, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM Get_READ_Power_Channel, power: {power}.")
         return power
 
-    def zeroing(self) -> str:
+    def zeroing(self) -> str | int:
         """
         Performs a Zeroing on all the MPM modules and channels.
 
@@ -438,15 +270,15 @@ class MpmInstrument(MpmData):
         Returns:
             str: Success.
         """
-        logger.info("MPM perform zeroing")
-        errorcode = self.__mpm.Zeroing()
+        self.logger.info("MPM perform zeroing")
+        error_code = self._instrument.Zeroing()
 
-        if errorcode != 0:
-            logger.error("Error while performing MPM zeroing, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM zeroing done.")
-        return errorcode
+        if error_code != 0:
+            self.logger.error("Error while performing MPM zeroing, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM zeroing done.")
+        return error_code
 
     def get_averaging_time(self) -> float:
         """
@@ -459,14 +291,14 @@ class MpmInstrument(MpmData):
         Returns:
             float: Averaging time of the MPM.
         """
-        logger.info("MPM get averaging time")
-        errorcode, self.averaging_time = self.__mpm.Get_Averaging_Time(0)
+        self.logger.info("MPM get averaging time")
+        error_code, self.averaging_time = self._instrument.Get_Averaging_Time(0)
 
-        if errorcode != 0:
-            logger.error("Error while getting MPM averaging time, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM averaging time: {self.averaging_time}")
+        if error_code != 0:
+            self.logger.error("Error while getting MPM averaging time, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM averaging time: {self.averaging_time}")
         return self.averaging_time
 
     def logging_start(self) -> None:
@@ -477,12 +309,12 @@ class MpmInstrument(MpmData):
             InstrumentError: In case the MPM is busy,
                         or fails to start MPM logging.
         """
-        logger.info("MPM start logging")
-        errorcode = self.__mpm.Logging_Start()
-        if errorcode != 0:
-            logger.error("Error while MPM start logging, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("MPM logging started.")
+        self.logger.info("MPM start logging")
+        error_code = self._instrument.Logging_Start()
+        if error_code != 0:
+            self.logger.error("Error while MPM start logging, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("MPM logging started.")
 
     def logging_stop(self, except_if_error: bool = True) -> None:
         """
@@ -498,13 +330,13 @@ class MpmInstrument(MpmData):
         Raises:
             InstrumentError: In case of failure in stopping the MPM logging.
         """
-        logger.info("MPM stop logging")
-        errorcode = self.__mpm.Logging_Stop()
+        self.logger.info("MPM stop logging")
+        error_code = self._instrument.Logging_Stop()
 
-        if errorcode != 0 and except_if_error is True:
-            logger.error("Error while MPM stop logging, ", str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info("MPM logging stopped.")
+        if error_code != 0 and except_if_error is True:
+            self.logger.error("Error while MPM stop logging, ", str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info("MPM logging stopped.")
 
     def get_each_channel_log_data(self,
                                   slot_number: int,
@@ -523,13 +355,13 @@ class MpmInstrument(MpmData):
         Returns:
             list: List of log data.
         """
-        logger.info(f"MPM get each channel log data, slot_number={slot_number}, channel_number={channel_number}")
-        errorcode, log_data = self.__mpm.Get_Each_Channel_Logdata(slot_number, channel_number, None)
-        if errorcode != 0:
-            logger.error("Error while getting channel log data, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM slot {slot_number} channel {channel_number}, log data length: {len(list(log_data))}")
+        self.logger.info(f"MPM get each channel log data, slot_number={slot_number}, channel_number={channel_number}")
+        error_code, log_data = self._instrument.Get_Each_Channel_Logdata(slot_number, channel_number, None)
+        if error_code != 0:
+            self.logger.error("Error while getting channel log data, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM slot {slot_number} channel {channel_number}, log data length: {len(list(log_data))}")
         return list(log_data)
 
     def get_trigger_data(self, slot_number) -> list[float]:
@@ -543,13 +375,13 @@ class MpmInstrument(MpmData):
         Returns:
             list[float]: List of trigger values.
         """
-        logger.info("MPM get 216 trigger data.")
-        errorcode, trigger = self.__mpm.Get_216_Triggerdata(slot_number, None)
-        if errorcode != 0:
-            logger.error("Error while getting MPM trigger data, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM trigger data length: {len(trigger)}")
+        self.logger.info("MPM get 216 trigger data.")
+        error_code, trigger = self._instrument.Get_216_Triggerdata(slot_number, None)
+        if error_code != 0:
+            self.logger.error("Error while getting MPM trigger data, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM trigger data length: {len(trigger)}")
         return trigger
 
     def set_logging_parameters(self,
@@ -572,20 +404,20 @@ class MpmInstrument(MpmData):
         Raises:
             InstrumentError: If setting the logging parameters to the MPM fails.
         """
-        logger.info(f"Set MPM logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
+        self.logger.info(f"Set MPM logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
                     f"sweep_step={sweep_step}, sweep_speed={sweep_speed}, trigger_step={trigger_step}")
-        errorcode = self.__mpm.Set_Logging_Paremeter_for_STS(start_wavelength,
+        error_code = self._instrument.Set_Logging_Paremeter_for_STS(start_wavelength,
                                                              stop_wavelength,
                                                              sweep_step,
                                                              trigger_step,
                                                              sweep_speed,
-                                                             self.__mpm.Measurement_Mode.Freerun)
+                                                             self._instrument.Measurement_Mode.Freerun)
 
-        if errorcode != 0:
-            logger.error("Error while setting MPM logging params",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM logging params set.")
+        if error_code != 0:
+            self.logger.error("Error while setting MPM logging params",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM logging params set.")
 
     def wait_for_log_completion(self) -> None:
         """
@@ -596,38 +428,25 @@ class MpmInstrument(MpmData):
             Please check trigger cable connection.
             InstrumentError: If the wait for MPM log completion fails.
         """
-        logger.info("MPM wait for log completion")
-        errorcode = None
+        self.logger.info("MPM wait for log completion")
+        error_code = None
         status = 0  # MPM Logging status 0: During logging 1: Completed, -1:stopped, 10:stopped
 
         logging_point = None
         # Constantly get the status in a loop. Increase the MPM timeout for this process.
         while status == 0:
             # Updates status, which should break us out of the loop.
-            errorcode, status, logging_point = self.__mpm.Get_Logging_Status(0, 0)
+            error_code, status, logging_point = self._instrument.Get_Logging_Status(0, 0)
             break
 
-        if errorcode == -999:
+        if error_code == -999:
             error_string = "MPM Trigger received an error! Please check trigger cable connection."
-            logger.critical(error_string)
+            self.logger.critical(error_string)
             raise RuntimeError(error_string)
 
-        if errorcode != 0 and status != -1:  # It's a success if either the error code is 0,
+        if error_code != 0 and status != -1:  # It's a success if either the error code is 0,
             # or the status is -1, otherwise, throw.
-            logger.error("Error while waiting for MPM log completion, ",
-                         str(errorcode) + ": " + instrument_error_strings(errorcode))
-            raise InstrumentError(str(errorcode) + ": " + instrument_error_strings(errorcode))
-        logger.info(f"MPM logging completed. logging_point={logging_point}")
-
-    def disconnect(self) -> None:
-        """
-        Disconnects the connection from the MPM instrument.
-
-        Raises:
-              RuntimeError: If disconnecting the MPM instrument fails.
-        """
-        try:
-            self.__mpm.DisConnect()
-            logger.info("MPM connection disconnected.")
-        except RuntimeError as e:
-            logger.error(f"Error while disconnecting the MPM connection, {e}")
+            self.logger.error("Error while waiting for MPM log completion, ",
+                         str(error_code) + ": " + instrument_error_strings(error_code))
+            raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+        self.logger.info(f"MPM logging completed. logging_point={logging_point}")
