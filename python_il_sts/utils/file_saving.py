@@ -2,8 +2,6 @@
 File Logging.
 Save STS parameter data.
 Save STS loss data.
-
-@organization: Santec Holdings Corp.
 """
 
 import os
@@ -25,7 +23,7 @@ FILE_LAST_SCAN_REFERENCE_DATA = "last_scan_reference_data.dat"
 FILE_REFERENCE_DATA_RESULTS = f"Reference_Data_{formatted_datetime}.csv"
 FILE_RAW_DATA_RESULTS = f"Raw_Data_{formatted_datetime}.csv"
 FILE_IL_DATA_RESULTS = f"IL_Data_{formatted_datetime}.csv"
-FILE_POWER_SWEEP_RESULTS = f"Power_Sweep_Results_{formatted_datetime}.csv"
+FILE_POWER_SCAN_RESULTS = f"Power_Scan_Results_{formatted_datetime}.csv"
 
 
 def save_sts_parameter_data(tsl: TslInstrument,
@@ -39,8 +37,8 @@ def save_sts_parameter_data(tsl: TslInstrument,
         "selected_ranges": ilsts.selected_ranges,
         "start_wavelength": tsl.start_wavelength,
         "stop_wavelength": tsl.stop_wavelength,
-        "sweep_step": tsl.sweep_step,
-        "sweep_speed": tsl.sweep_speed,
+        "scan_step": tsl.scan_step,
+        "scan_speed": tsl.scan_speed,
         "power": tsl.power,                 # only really used on the TSL, and not on the mpm or spu.
         "actual_step": tsl.actual_step,
     }
@@ -281,9 +279,9 @@ def sts_save_rawdata_unused(ilsts: StsProcess,
         f.close()
 
 
-def save_power_sweep_results(power_array: list, power_reading: list,
+def save_power_scan_results(power_array: list, power_reading: list,
                              str_filename: str):
-    """ Save power sweep data. """
+    """ Save power scan data. """
     check_and_rename_old_file(str_filename)
 
     with open(str_filename, mode='w', newline='') as f:

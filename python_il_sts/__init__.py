@@ -1,7 +1,5 @@
 """
 Python IL STS process.
-
-@organization: Santec Holdings Corp.
 """
 
 

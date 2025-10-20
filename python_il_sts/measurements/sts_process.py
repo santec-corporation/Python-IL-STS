@@ -1,7 +1,5 @@
 """
 STS Process Class.
-
-@organization: Santec Holdings Corp.
 """
 
 import re
@@ -47,8 +45,8 @@ class STSData:
 
 class StsProcess(STSData):
     """
-    STS processing class to set sweep parameters,
-    perform sweep operations and get sweep operation data.
+    STS processing class to set scan parameters,
+    perform scan operations and get scan operation data.
 
     Attributes:
         _tsl (TslInstrument): TSL instrument class handle.
@@ -107,7 +105,7 @@ class StsProcess(STSData):
                                                             self._tsl.actual_step)
 
         if sts_error != 0:
-            logger.error("Error while making wavelength table at sweep, ",
+            logger.error("Error while making wavelength table at scan, ",
                          str(sts_error) + ": " + sts_process_error_strings(sts_error))
             raise STSProcessError(str(sts_error) + ": " + sts_process_error_strings(sts_error))
 
@@ -115,7 +113,7 @@ class StsProcess(STSData):
         logger.info("Making target wavelength table")
         sts_error = self._ilsts.Make_Target_Wavelength_Table(self._tsl.start_wavelength,
                                                              self._tsl.stop_wavelength,
-                                                             self._tsl.sweep_step)
+                                                             self._tsl.scan_step)
 
         if sts_error != 0:
             logger.error("Error while making wavelength table as rescaling, ",
@@ -252,24 +250,23 @@ class StsProcess(STSData):
         else:
             return 5
 
-    def _base_sweep_process(self, sweep_index: str = "") -> None:
+    def _base_scan_process(self, scan_index: str = "") -> None:
         """
-        Configures TSL & MPM (& DAQ) to perform a sweep process.
+        Configures TSL & MPM (& DAQ) to perform a scan process.
 
         Parameters:
-            sweep_index(str): Current sweeping index. Example: Range 1
-            Default: empty string
+            scan_index(str): Current scaning index. Example: Range 1
 
         Raises:
             RuntimeError: If TSL/MPM and Daq instruments are not synchronized, TSL or MPM times out.
-            Exception: If there is an issue with TSL sweep process.
+            Exception: If there is an issue with TSL scan process.
         """
-        logger.info("STS sweep proces")
+        logger.info("STS scan proces")
 
-        print(f"\nScanning{sweep_index} Started....")
+        print(f"\nScanning{scan_index} Started....")
 
-        # Start the TSL sweep proces
-        self._tsl.start_sweep()
+        # Start the TSL scan proces
+        self._tsl.start_scan()
 
         # Start the MPM logging
         self._mpm.logging_start()
@@ -277,25 +274,26 @@ class StsProcess(STSData):
         try:
             # Wait until the TSL is set to "Waiting for trigger" status
             self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=4)
+            self._tsl.wait_for_scan_status(waiting_time=3000, scan_status=4)
 
             # Start DAQ sampling
             if self._daq:
                 self._daq.sampling_start()
 
             # Calculate the mpm wait time
-            mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.sweep_speed * 1100)
+            mpm_wait_time = int((self._tsl.stop_wavelength - self._tsl.start_wavelength) / self._tsl.scan_speed * 1100)
             if mpm_wait_time < 5000:
                 mpm_wait_time = 5000
 
             # Issue the TSL soft trigger
             self._tsl.soft_trigger()
 
-            # DAQ wait for for sweep completion
+            # DAQ wait for for scan completion
             if self._daq:
                 self._daq.sampling_wait()
 
             # Wait until the TSL is set to "Standby" status
-            self._tsl.wait_for_sweep_status(waiting_time=mpm_wait_time, sweep_status=1)
+            self._tsl.wait_for_scan_status(waiting_time=mpm_wait_time, scan_status=1)
 
             # Wait for MPM log completion
             self._mpm.wait_for_log_completion()
@@ -304,13 +302,13 @@ class StsProcess(STSData):
             self._mpm.logging_stop(True)
 
             # Wait until the TSL is set to "Standby" status
-            self._tsl.wait_for_sweep_status(waiting_time=3000, sweep_status=1)
+            self._tsl.wait_for_scan_status(waiting_time=3000, scan_status=1)
 
-            # Start the TSL sweep
-            self._tsl.start_sweep()
+            # Start the TSL scan
+            self._tsl.start_scan()
 
         except RuntimeError as scan_exception:
-            self._tsl.stop_sweep(False)
+            self._tsl.stop_scan(False)
             self._mpm.logging_stop(False)
             logger.error(scan_exception)
             raise scan_exception
@@ -322,7 +320,7 @@ class StsProcess(STSData):
 
         print("\n....Scan Completed")
 
-        logger.info("STS base sweep process done.")
+        logger.info("STS base scan process done.")
 
         return None
 
@@ -434,12 +432,12 @@ class StsProcess(STSData):
 
         return None
 
-    def _get_measurement_data(self, sweep_count: int) -> int:
+    def _get_measurement_data(self, scan_count: int) -> int:
         """
         Gets logged data during DUT measurement.
 
         Parameters:
-            sweep count (int): The number of sweep process operations.
+            scan count (int): The number of scan process operations.
 
         Raises:
             Exception: If power monitor/MPM data couldn't be added to the data structure.
@@ -542,15 +540,62 @@ class StsProcess(STSData):
 
     # endregion
 
+    def setting_tsl_scan_params(self, previous_param_data: dict) -> None:
+        """
+        Set scan parameters.
+
+        Parameters:
+            previous_param_data (dict): Previous scan process data, if available.
+
+        Returns:
+            None
+        """
+        if previous_param_data is not None:
+            start_wavelength = float(previous_param_data["start_wavelength"])
+            stop_wavelength = float(previous_param_data["stop_wavelength"])
+            scan_step = float(previous_param_data["scan_step"])
+            scan_speed = float(previous_param_data["scan_speed"])
+            power = float(previous_param_data["power"])
+
+            print("Start Wavelength (nm): " + str(start_wavelength))
+            print("Stop Wavelength (nm): " + str(stop_wavelength))
+            print("scan Step (nm): " + str(scan_step))  # nm, not pm.
+            print("scan Speed (nm): " + str(scan_speed))
+            print("Output Power (dBm): " + str(power))
+        else:
+            start_wavelength = float(input("\nInput Start Wavelength (nm): "))
+            stop_wavelength = float(input("Input Stop Wavelength (nm): "))
+            scan_step = float(input("Input scan Step (pm): ")) / 1000
+
+            if self._tsl.get_tsl_type_flag():
+                scan_speed = float(input("Input scan Speed (nm/sec): "))
+            else:
+                num = 1
+                print('\nSpeed table:')
+                for i in self._tsl.get_scan_speed_table():
+                    print(str(num) + "- " + str(i))
+                    num += 1
+                speed = input("Select a scan speed (nm/sec): ")
+                scan_speed = self._tsl.get_scan_speed_table()[int(speed) - 1]
+
+            power = float(input("Input Output Power (dBm): "))
+            while power > 10:
+                print("Invalid value of Output Power ( <=10 dBm )")
+                power = float(input("Input Output Power (dBm): "))
+
+        # Set TSL parameters
+        self._tsl.set_power(power)
+        self._tsl.set_scan_parameters(start_wavelength, stop_wavelength, scan_step, scan_speed)
+
     def set_parameters(self) -> None:
         """
-        Sets the sweep parameters for an STS process operation.
+        Sets the scan parameters for an STS process operation.
 
         Raises:
             STSProcessError: When Reference/DUT data couldn't be erased,
                         When Wavelength table couldn't be created,
                         Error with rescaling,
-                        If setting STS sweep parameters fails.
+                        If setting STS scan parameters fails.
         """
         logger.info("Setting STS params")
 
@@ -564,15 +609,15 @@ class StsProcess(STSData):
         # Logging parameters for MPM
         self._mpm.set_logging_parameters(self._tsl.start_wavelength,
                                          self._tsl.stop_wavelength,
-                                         self._tsl.sweep_step,
-                                         self._tsl.sweep_speed,
+                                         self._tsl.scan_step,
+                                         self._tsl.scan_speed,
                                          actual_step)
 
         # Logging parameter for DAQ(DAQ)
         if self._daq:
             self._daq.set_logging_parameters(self._tsl.start_wavelength,
                                              self._tsl.stop_wavelength,
-                                             self._tsl.sweep_speed,
+                                             self._tsl.scan_speed,
                                              self._tsl.actual_step)
 
             # Pass MPM averaging time to DAQ Class
@@ -590,7 +635,7 @@ class StsProcess(STSData):
         # Set Rescaling mode for STSProcess class
         self._rescaling_settings()
 
-        # Create sweep wavelength table
+        # Create scan wavelength table
         self._create_wavelength_table()
 
         logger.info("STS params set.")
@@ -600,11 +645,11 @@ class StsProcess(STSData):
         Select the channels to be measured.
         It offers the user to choose between different ways to select MPM channels.
 
-        Checks if previous sweep parameters setting available,
-        if available, then loads the selected channels from the previous sweep parameters setting.
+        Checks if previous scan parameters setting available,
+        if available, then loads the selected channels from the previous scan parameters setting.
 
         Parameters:
-            previous_param_data (dict): Previous sweep parameters settings.
+            previous_param_data (dict): Previous scan parameters settings.
         """
         logger.info("STS set selected channels for measurement")
 
@@ -660,11 +705,11 @@ class StsProcess(STSData):
         """
         Sets the optical dynamic dynamic_range of the MPM.
 
-        Checks if previous sweep parameters setting available,
-        if available, then loads the selected ranges from the previous sweep parameters setting.
+        Checks if previous scan parameters setting available,
+        if available, then loads the selected ranges from the previous scan parameters setting.
 
         Parameters:
-            previous_param_data (dict): Previous sweep parameters settings.
+            previous_param_data (dict): Previous scan parameters settings.
         """
         logger.info("STS set selected ranges")
         if previous_param_data is not None:  # Display previously used optical dynamic ranges
@@ -711,14 +756,14 @@ class StsProcess(STSData):
             # Set the reference dynamic_range value to the MPM channel
             self._mpm.set_channel_range(i.SlotNumber, i.ChannelNumber, reference_range)
 
-            # Base sweep process
-            self._base_sweep_process()
+            # Base scan process
+            self._base_scan_process()
 
             # Get sampling data & Add in STSProcess Class
             self._get_reference_data(i)
 
-            # TSL Sweep stop
-            self._tsl.stop_sweep()
+            # TSL scan stop
+            self._tsl.stop_scan()
         logger.info("STS reference completed.")
 
     def sts_reference_from_saved_file(self) -> None:
@@ -789,18 +834,18 @@ class StsProcess(STSData):
         """
         logger.info("STS measurement operation")
 
-        sweep_count = 1
+        scan_count = 1
         for mpm_range in self.dynamic_range:
             # Set the MPM dynamic dynamic_range
             self._mpm.set_range(mpm_range)
 
-            # Base sweep process
-            self._base_sweep_process(f" Range {mpm_range}")
+            # Base scan process
+            self._base_scan_process(f" Range {mpm_range}")
 
             # Get the measurement scan data
-            _ = self._get_measurement_data(sweep_count)
+            _ = self._get_measurement_data(scan_count)
 
-            sweep_count += 1
+            scan_count += 1
 
         # Call the measurement data for rescaling
         self._call_measurement_data_for_rescaling()
@@ -808,8 +853,8 @@ class StsProcess(STSData):
         # Call the IL merge data
         self._call_il_data_for_merge()
 
-        # TSL Sweep stop
-        self._tsl.stop_sweep()
+        # TSL scan stop
+        self._tsl.stop_scan()
 
         # Get the IL data
         self._get_il_data()
@@ -844,7 +889,7 @@ class StsProcess(STSData):
         logger.info("Getting target wavelength table")
         error_code, wavelength_table = self._ilsts.Get_Target_Wavelength_Table(None)
         logger.info("Received wavelength table length: %d", len(wavelength_table))
-        # error_code,wavelength_table = self._ilsts.Get_Target_Wavelength_Table(wavelength_array) #TODO; testing.....
+        # error_code,wavelength_table = self._ilsts.Get_Target_Wavelength_Table(wavelength_array)   # TODO; testing.....
         if error_code != 0:
             logger.error("Error while getting the target wavelength, ",
                          str(error_code) + ": " + sts_process_error_strings(error_code))
@@ -861,7 +906,7 @@ class StsProcess(STSData):
 
     def get_dut_data(self) -> None:
         """
-        Gets DUT data of the recent STS sweep operation.
+        Gets DUT data of the recent STS scan operation.
 
         Raises:
             STSProcessError: If getting the dut data fails.

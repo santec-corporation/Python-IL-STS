@@ -22,11 +22,11 @@ class TslData:
         spec_min_wav (float): The minimum wavelength of the spectral dynamic_range of the TSL.
         power (float): The power setting of the TSL.
         actual_step (float): The step wavelength value of the TSL.
-        start_wavelength (float): The starting wavelength for the sweep.
-        stop_wavelength (float): The stopping wavelength for the sweep.
-        sweep_step (float): The step wavelength of a sweep.
-        sweep_speed (float): The speed of a sweep.
-        sweep_speed_table (list): A table of TSL sweep speeds.
+        start_wavelength (float): The starting wavelength for the scan.
+        stop_wavelength (float): The stopping wavelength for the scan.
+        scan_step (float): The step wavelength of a scan.
+        scan_speed (float): The speed of a scan.
+        scan_speed_table (list): A table of TSL scan speeds.
     """
     max_power: float = 0.0
     spec_max_wav: float = 0.0
@@ -36,9 +36,9 @@ class TslData:
     start_wavelength: float = 0.0
     stop_wavelength: float = 0.0
     average_wavelength: float = 0.0
-    sweep_step: float = 0.0
-    sweep_speed: float = 0.0
-    sweep_speed_table: list = []
+    scan_step: float = 0.0
+    scan_speed: float = 0.0
+    scan_speed_table: list = []
 
 
 class TslInstrument(TslData, BaseInstrument):
@@ -141,12 +141,12 @@ class TslInstrument(TslData, BaseInstrument):
                            str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-    def get_sweep_speed_table(self) -> list[float]:
+    def get_scan_speed_table(self) -> list[float]:
         """
         **Note**
             This method works only with a "TSL-570" instrument.
 
-        Returns sweep sweep_speed table of TSL-570:
+        Returns scan scan_speed table of TSL-570:
         Example: [1,2,5,10,20,50,100,200]
                  All values in nm/sec units.
 
@@ -154,11 +154,11 @@ class TslInstrument(TslData, BaseInstrument):
             InstrumentError: "DeviceError" when other TSL is connected.
 
         Returns:
-            list[float]: Table of sweep speeds allowed by the TSL-570.
+            list[float]: Table of scan speeds allowed by the TSL-570.
         """
         self.logger.info("Get TSL speed table")
         error_code, table = self._instrument.Get_Sweep_Speed_table(None)
-        self.sweep_speed_table = []
+        self.scan_speed_table = []
 
         # This function only supports "TSL-570"
         # When other TSL connected, error_code return "DeviceError"
@@ -166,14 +166,14 @@ class TslInstrument(TslData, BaseInstrument):
             error_code = 0
         else:
             for item in table:
-                self.sweep_speed_table.append(item)
+                self.scan_speed_table.append(item)
 
         if error_code != 0:
             self.logger.error("Error while getting TSL speed table",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
         self.logger.info("TSL speed table received.")
-        return self.sweep_speed_table
+        return self.scan_speed_table
 
     def get_max_power(self) -> None:
         """
@@ -210,7 +210,7 @@ class TslInstrument(TslData, BaseInstrument):
             list[float]: List of power logging data.
         """
         self.logger.info("TSL get power logging data.")
-        error_code, log_count, monitor = self._instrument.Get_Logging_Data_Power_for_STS(self.sweep_speed,
+        error_code, log_count, monitor = self._instrument.Get_Logging_Data_Power_for_STS(self.scan_speed,
                                                                                   self.actual_step, 0, None)
         if error_code not in [0, -2]:
             self.logger.error("Error while getting TSL power logging data, ",
@@ -270,53 +270,53 @@ class TslInstrument(TslData, BaseInstrument):
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-    def set_sweep_parameters(self,
+    def set_scan_parameters(self,
                              start_wavelength: float,
                              stop_wavelength: float,
-                             sweep_step: float,
-                             sweep_speed: float) -> None:
+                             scan_step: float,
+                             scan_speed: float) -> None:
         """
-        Sets the TSL sweep parameters.
+        Sets the TSL scan parameters.
 
         Parameters:
-            start_wavelength (float): The starting wavelength for the sweep.
-            stop_wavelength (float): The stopping wavelength for the sweep.
-            sweep_step (float): The step wavelength of a sweep.
-            sweep_speed (float): The speed of a sweep.
+            start_wavelength (float): The starting wavelength for the scan.
+            stop_wavelength (float): The stopping wavelength for the scan.
+            scan_step (float): The step wavelength of a scan.
+            scan_speed (float): The speed of a scan.
 
         Raises:
-            InstrumentError: If setting the TSL sweep parameters fails.
+            InstrumentError: If setting the TSL scan parameters fails.
         """
-        self.logger.info(f"Set TSL sweep params: start_wavelength={start_wavelength}, "
-                    f"stop_wavelength={stop_wavelength}, sweep_step={sweep_step}, sweep_speed={sweep_speed}")
+        self.logger.info(f"Set TSL scan params: start_wavelength={start_wavelength}, "
+                    f"stop_wavelength={stop_wavelength}, scan_step={scan_step}, scan_speed={scan_speed}")
         self.start_wavelength = start_wavelength
         self.stop_wavelength = stop_wavelength
         self.average_wavelength = (start_wavelength + stop_wavelength) / 2
-        self.sweep_step = sweep_step
-        self.sweep_speed = sweep_speed
+        self.scan_step = scan_step
+        self.scan_speed = scan_speed
         self.tsl_busy_check()
 
-        error_code, self.actual_step = self._instrument.Set_Sweep_Parameter_for_STS(self.start_wavelength,
+        error_code, self.actual_step = self._instrument.Set_scan_Parameter_for_STS(self.start_wavelength,
                                                                              self.stop_wavelength,
-                                                                             self.sweep_speed,
-                                                                             self.sweep_step,
+                                                                             self.scan_speed,
+                                                                             self.scan_step,
                                                                              0)
 
         if error_code != 0:
-            self.logger.error("Error while setting TSL sweep params",
+            self.logger.error("Error while setting TSL scan params",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
-        self.logger.info(f"TSL sweep params set, actual_step={self.actual_step}")
+        self.logger.info(f"TSL scan params set, actual_step={self.actual_step}")
         self._instrument.Set_Wavelength(self.average_wavelength)
         self.tsl_busy_check(5000)
 
     def soft_trigger(self) -> None:
         """
-        Issues a soft trigger to start the TSL sweep.
+        Issues a soft trigger to start the TSL scan.
 
         Raises:
-            InstrumentError: In case TSL is not in Standby mode, or if TSL cannot start the sweep.
+            InstrumentError: In case TSL is not in Standby mode, or if TSL cannot start the scan.
         """
         self.logger.info("Issue soft trigger")
         error_code = self._instrument.Set_Software_Trigger()
@@ -327,26 +327,26 @@ class TslInstrument(TslData, BaseInstrument):
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
         self.logger.info("Issue soft trigger done.")
 
-    def start_sweep(self) -> None:
+    def start_scan(self) -> None:
         """
-        Starts the TSL sweep.
+        Starts the TSL scan.
         Method to be used when TSL is not connected to STS.
 
         Raises:
-            InstrumentError: In case TSL doesn't start the sweep.
+            InstrumentError: In case TSL doesn't start the scan.
         """
-        self.logger.info("TSL start sweep")
-        error_code = self._instrument.Sweep_Start()
+        self.logger.info("TSL start scan")
+        error_code = self._instrument.scan_Start()
 
         if error_code != 0:
-            self.logger.error("Error while starting TSL sweep",
+            self.logger.error("Error while starting TSL scan",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
-        self.logger.info("TSL start sweep done.")
+        self.logger.info("TSL start scan done.")
 
-    def stop_sweep(self, except_if_error: bool = True):
+    def stop_scan(self, except_if_error: bool = True):
         """
-        Stops the TSL sweep.
+        Stops the TSL scan.
 
         Parameters:
             except_if_error (bool | optional): Set True if raising exception is needed within this method.
@@ -356,16 +356,16 @@ class TslInstrument(TslData, BaseInstrument):
             Default value: True.
 
         Raises:
-            InstrumentError: In case of failure in stopping the TSL sweep.
+            InstrumentError: In case of failure in stopping the TSL scan.
         """
-        self.logger.info("TSL stop sweep")
-        error_code = self._instrument.Sweep_Stop()
+        self.logger.info("TSL stop scan")
+        error_code = self._instrument.scan_Stop()
 
         if error_code != 0 and except_if_error is True:
-            self.logger.error("Error while stopping TSL sweep",
+            self.logger.error("Error while stopping TSL scan",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
-        self.logger.info("TSL stop sweep done.")
+        self.logger.info("TSL stop scan done.")
 
     def tsl_busy_check(self, time_out: int = 3000) -> None:
         """
@@ -384,17 +384,17 @@ class TslInstrument(TslData, BaseInstrument):
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
         self.logger.info("TSL busy check done.")
 
-    def wait_for_sweep_status(self,
+    def wait_for_scan_status(self,
                               waiting_time: int,
-                              sweep_status: int) -> None:
+                              scan_status: int) -> None:
         """
-        Wait until the TSL is set to a specified status prior the sweeping process.
+        Wait until the TSL is set to a specified status prior the scaning process.
 
 
         Parameters:
-            waiting_time (int): Waiting time (milliseconds) before setting a sweep status.
-            sweep_status (int): Set the sweep status of the TSL.
-                                Sweep status values:
+            waiting_time (int): Waiting time (milliseconds) before setting a scan status.
+            scan_status (int): Set the scan status of the TSL.
+                                scan status values:
                                 1: Standby
                                 2: Running
                                 3: Pause
@@ -402,9 +402,9 @@ class TslInstrument(TslData, BaseInstrument):
                                 5: Return
 
         Raises:
-            InstrumentError: In case TSL is not set to the specified sweep status after timeout.
+            InstrumentError: In case TSL is not set to the specified scan status after timeout.
         """
-        self.logger.info("TSL wait for sweep status")
+        self.logger.info("TSL wait for scan status")
         _status = {
             1: self._instrument.Sweep_Status.Standby,
             2: self._instrument.Sweep_Status.Running,
@@ -415,7 +415,7 @@ class TslInstrument(TslData, BaseInstrument):
         error_code = self._instrument.Waiting_For_Sweep_Status(waiting_time, _status[sweep_status])
 
         if error_code != 0:
-            self.logger.error("Error while TSL wait for sweep status",
+            self.logger.error("Error while TSL wait for scan status",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
-        self.logger.info("TSL wait for sweep status done.")
+        self.logger.info("TSL wait for scan status done.")

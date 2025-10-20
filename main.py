@@ -9,59 +9,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Importing modules from the santec directory
+from python_il_sts.connections.connection_manager import ConnectionManager
 from python_il_sts import TslInstrument, MpmInstrument, DaqInstrument, GetInstruments, StsProcess, file_saving
 
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000
 
-
-def setting_tsl_sweep_params(connected_tsl: TslInstrument, previous_param_data: dict) -> None:
-    """
-    Set sweep parameters for the TSL instrument.
-
-    Parameters:
-        connected_tsl (TslInstrument): Instance of the TSL class.
-        previous_param_data (dict): Previous sweep process data, if available.
-
-    Returns:
-        None
-    """
-    if previous_param_data is not None:
-        start_wavelength = float(previous_param_data["start_wavelength"])
-        stop_wavelength = float(previous_param_data["stop_wavelength"])
-        sweep_step = float(previous_param_data["sweep_step"])
-        sweep_speed = float(previous_param_data["sweep_speed"])
-        power = float(previous_param_data["power"])
-
-        print("Start Wavelength (nm): " + str(start_wavelength))
-        print("Stop Wavelength (nm): " + str(stop_wavelength))
-        print("Sweep Step (nm): " + str(sweep_step))  # nm, not pm.
-        print("Sweep Speed (nm): " + str(sweep_speed))
-        print("Output Power (dBm): " + str(power))
-    else:
-        start_wavelength = float(input("\nInput Start Wavelength (nm): "))
-        stop_wavelength = float(input("Input Stop Wavelength (nm): "))
-        sweep_step = float(input("Input Sweep Step (pm): ")) / 1000
-
-        if connected_tsl.get_tsl_type_flag():
-            sweep_speed = float(input("Input Sweep Speed (nm/sec): "))
-        else:
-            num = 1
-            print('\nSpeed table:')
-            for i in connected_tsl.get_sweep_speed_table():
-                print(str(num) + "- " + str(i))
-                num += 1
-            speed = input("Select a sweep speed (nm/sec): ")
-            sweep_speed = connected_tsl.get_sweep_speed_table()[int(speed) - 1]
-
-        power = float(input("Input Output Power (dBm): "))
-        while power > 10:
-            print("Invalid value of Output Power ( <=10 dBm )")
-            power = float(input("Input Output Power (dBm): "))
-
-    # Set TSL parameters
-    connected_tsl.set_power(power)
-    connected_tsl.set_sweep_parameters(start_wavelength, stop_wavelength, sweep_step, sweep_speed)
 
 
 def prompt_and_get_previous_param_data(file_last_scan_params: str) -> dict | None:
@@ -158,14 +111,14 @@ def plot_wavelength_dependent_loss(wavelength: list, il_data: list):
 
 def plot_power_reading(power_array, power_reading):
     """
-    Plot the power sweep results.
+    Plot the power scan results.
 
     Args:
         power_array (list): Array of power values.
         power_reading (list): Corresponding power readings.
     """
     try:
-        print("Displaying power sweep results.")
+        print("Displaying power scan results.")
         plt.plot(power_array, power_reading)
         max_y_axis = max(power_reading)
         min_y_axis = min(power_reading)
@@ -173,35 +126,37 @@ def plot_power_reading(power_array, power_reading):
         plt.yticks(np.arange(min_y_axis, max_y_axis, step_y_axis))
         plt.show()
     except Exception as e:
-        print(f"Error while displaying power sweep results, {e}")
+        print(f"Error while displaying power scan results, {e}")
 
 
 def connection():
     """ Detect and connect to the TSL, MPM and DAQ instruments. """
-    tsl: TslInstrument
-    mpm: MpmInstrument
-    daq: DaqInstrument
+    tsl_resource = ""
+    mpm_resource = ""
+    daq_resource = ""
 
-    device_address = GetInstruments()
-    device_address.list_instruments()
+    tsl_instrument: TslInstrument
+    mpm_instrument: MpmInstrument
+    daq_instrument = DaqInstrument | None
 
-    tsl_instrument = device_address.get_tsl_address()
-    mpm_instrument = device_address.get_mpm_address()
+    connection_manager = ConnectionManager()
+    instrument_list = connection_manager.list_instruments()
 
-    tsl = TslInstrument(instrument=tsl_instrument)
-    tsl.connect()
+    for dev in instrument_list:
+        if "TSL" in dev:
+            tsl_resource = dev
+        elif "MPM" in dev:
+            mpm_resource = dev
+        elif "Dev" in dev:
+            daq_resource = dev
 
-    mpm = MpmInstrument(instrument=mpm_instrument)
-    mpm.connect()
+    tsl_instrument = connection_manager.connect_tsl(tsl_resource)
+    mpm_instrument = connection_manager.connect_mpm(mpm_resource)
 
-    if "220" in mpm.idn():
-        return tsl, mpm, None
+    if "210" in mpm_resource:
+        daq_instrument = connection_manager.connect(daq_resource)
 
-    daq_address = device_address.get_daq_address()
-    daq = DaqInstrument(device_name=daq_address)
-    daq.connect()
-
-    return tsl, mpm, daq
+    return tsl_instrument, mpm_instrument, daq_instrument
 
 
 def tsl_power_check(tsl: TslInstrument):
@@ -218,7 +173,7 @@ def tsl_power_check(tsl: TslInstrument):
     tsl.set_power(power)
 
 
-def wavelength_dependent_loss(tsl, mpm, daq):
+def wavelength_dependent_loss(tsl: TslInstrument, mpm: MpmInstrument, daq: DaqInstrument | None):
     """
     Perform the wavelength-dependent loss measurement.
 
@@ -228,78 +183,78 @@ def wavelength_dependent_loss(tsl, mpm, daq):
         daq: The daq device.
     """
     # Set the TSL properties
-    previous_param_data = prompt_and_get_previous_param_data(file_saving.FILE_LAST_SCAN_PARAMS)
-    setting_tsl_sweep_params(tsl, previous_param_data)
+    previous_parameter_data = prompt_and_get_previous_param_data(file_saving.FILE_LAST_SCAN_PARAMS)
 
     # Initiate and run the ILSTS
-    if mpm:
-        ilsts = StsProcess(tsl, mpm, daq)
+    ilsts = StsProcess(tsl, mpm, daq)
+    ilsts.setting_tsl_scan_params(previous_parameter_data)
 
-        # Select channels to be measured.
-        ilsts.set_selected_channels(previous_param_data)
-        if ilsts.mpm_215_selection_check():
-            tsl_power_check(tsl)
-            ilsts.selected_ranges = [2]
-        else:
-            ilsts.set_selected_ranges(previous_param_data)
+    # Select channels to be measured.
+    ilsts.set_selected_channels(previous_parameter_data)
+    if ilsts.mpm_215_selection_check():
+        tsl_power_check(tsl)
+        ilsts.selected_ranges = [2]
+    else:
+        ilsts.set_selected_ranges(previous_parameter_data)
 
-        # Set Sweep parameters to MPM and DAQ
-        ilsts.set_parameters()
+    # Set scan parameters to MPM and DAQ
+    ilsts.set_parameters()
 
-        # Check for previously saved reference data
-        previous_ref_data_array = None
-        if previous_param_data:
-            previous_ref_data_array = prompt_and_get_previous_reference_data()
-        if previous_ref_data_array:
-            ilsts.reference_data_array = previous_ref_data_array
+    # Check for previously saved reference data
+    previous_ref_data_array = None
+    if previous_parameter_data:
+        previous_ref_data_array = prompt_and_get_previous_reference_data()
+    if previous_ref_data_array:
+        ilsts.reference_data_array = previous_ref_data_array
 
-        # Saving parameters to file
-        if not previous_param_data:
-            file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
+    # Saving parameters to file
+    if not previous_parameter_data:
+        file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
 
-        # Run a reference scan if previously saved reference data not found
-        if len(ilsts.reference_data_array) == 0:
-            print("\nConnect for Reference measurement and press ENTER")
-            print("Reference process:")
-            # IL STS reference scan
-            ilsts.sts_reference()
-        else:
-            print("Loading reference data...")
-            ilsts.sts_reference_from_saved_file()
+    # Run a reference scan if previously saved reference data not found
+    if len(ilsts.reference_data_array) == 0:
+        print("\nConnect for Reference measurement and press ENTER")
+        print("Reference process:")
+        # IL STS reference scan
+        ilsts.sts_reference()
+    else:
+        print("Loading reference data...")
+        ilsts.sts_reference_from_saved_file()
 
-        # Perform the sweep operation
-        ans = "y"
-        while ans in "yY":
-            print("\nDUT measurement")
-            while True:
-                reps = int(input("Input DUT scan repeat count (greater than 0): "))
-                if reps > 0:
-                    break
-                print("Invalid repeat count, enter a positive number.\n")
-            input("Connect the DUT and press ENTER")
-            for i in range(reps):
-                scan_index = i + 1
-                print("\nScan {} of {}...".format(str(scan_index), reps))
+    # Perform the scan operation
+    ans = "y"
+    while ans in "yY":
+        print("\nDUT measurement")
+        while True:
+            reps = int(input("Input DUT scan repeat count (greater than 0): "))
+            if reps > 0:
+                break
+            print("Invalid repeat count, enter a positive number.\n")
+        input("Connect the DUT and press ENTER")
+        for i in range(reps):
+            scan_index = i + 1
+            print("\nScan {} of {}...".format(str(scan_index), reps))
 
-                # IL STS measurement scan
-                ilsts.sts_measurement()
+            # IL STS measurement scan
+            ilsts.sts_measurement()
 
-                user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
-                if user_map_display == "y":
-                    plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
+            user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
+            if user_map_display == "y":
+                plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
 
-                if reps > 1 and scan_index < reps:
-                    input(f"\nPress ENTER to continue to Scan {scan_index + 1}...")
-            ilsts.get_dut_data()  # Get and store DUT scan data
+            if reps > 1 and scan_index < reps:
+                input(f"\nPress ENTER to continue to Scan {scan_index + 1}...")
+        ilsts.get_dut_data()  # Get and store DUT scan data
 
-            ans = input("\nRedo Scan ? (y/n): ")
+        ans = input("\nRedo Scan ? (y/n): ")
 
-        save_all_data(ilsts)
+    save_all_data(ilsts)
 
 
-def power_sweep(tsl, mpm):
+
+def power_scan(tsl, mpm):
     """
-    Perform a power sweep measurement.
+    Perform a power scan measurement.
 
     Args:
         tsl: The tsl device.
@@ -344,8 +299,8 @@ def power_sweep(tsl, mpm):
     # Plot results
     plot_power_reading(power_array, power_reading)
 
-    print("\nSaving power sweep data to file " + file_saving.FILE_POWER_SWEEP_RESULTS + "...")
-    file_saving.save_power_sweep_results(power_array, power_reading, file_saving.FILE_POWER_SWEEP_RESULTS)
+    print("\nSaving power scan data to file " + file_saving.FILE_POWER_SCAN_RESULTS + "...")
+    file_saving.save_power_scan_results(power_array, power_reading, file_saving.FILE_POWER_SCAN_RESULTS)
 
 
 def main() -> None:
@@ -369,7 +324,7 @@ def main() -> None:
         if choice == '1':
             wavelength_dependent_loss(tsl, mpm, daq)
         else:
-            power_sweep(tsl, mpm)
+            power_scan(tsl, mpm)
 
         break_script = input('\nDo you want to continue? (Y/n): ')
 

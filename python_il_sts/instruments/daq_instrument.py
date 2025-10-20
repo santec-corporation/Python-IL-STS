@@ -26,25 +26,25 @@ class DaqInstrument(BaseInstrument):
     def set_logging_parameters(self,
                                start_wavelength: float,
                                stop_wavelength: float,
-                               sweep_speed: float,
+                               scan_speed: float,
                                tsl_actual_step: float) -> None:
         """
         Set DAQ logging parameters for DAQ sampling.
 
         Parameters:
-            start_wavelength (float): Start wavelength value of the sweep.
-            stop_wavelength (float): Stop wavelength value of the sweep.
-            sweep_speed (float): Speed value of the sweep.
-            tsl_actual_step (float): Step wavelength value of the sweep.
+            start_wavelength (float): Start wavelength value of the scan.
+            stop_wavelength (float): Stop wavelength value of the scan.
+            scan_speed (float): Speed value of the scan.
+            tsl_actual_step (float): Step wavelength value of the scan.
 
         Raises:
             InstrumentError: If setting the logging parameters to the DAQ device fails.
         """
         self.logger.info(f"Set DAQ logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
-                    f"sweep_speed={sweep_speed}, tsl_actual_step={tsl_actual_step}")
+                    f"scan_speed={scan_speed}, tsl_actual_step={tsl_actual_step}")
         error_code = self._instrument.Set_Sampling_Parameter(start_wavelength,
                                                             stop_wavelength,
-                                                            sweep_speed,
+                                                            scan_speed,
                                                             tsl_actual_step)
 
         if error_code != 0:

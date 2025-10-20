@@ -3,6 +3,7 @@ MPM Instrument Class.
 """
 
 from ..drivers.santec_wrapper import MPM
+from .base_instrument import BaseInstrument
 
 # Importing instrument error strings
 from ..utils.error_handling_class import InstrumentError, instrument_error_strings
@@ -53,13 +54,13 @@ class MpmData:
     ]
 
 
-class MpmInstrument(MpmData):
+class MpmInstrument(MpmData, BaseInstrument):
     """
     A class to represent the data for an MPM.
     """
 
     def __init__(self):
-        
+        super().__init__()
         self.logger = get_logger(__class__.__name__)
         self._instrument = MPM()
 
@@ -387,17 +388,17 @@ class MpmInstrument(MpmData):
     def set_logging_parameters(self,
                                start_wavelength: float,
                                stop_wavelength: float,
-                               sweep_step: float,
-                               sweep_speed: float,
+                               scan_step: float,
+                               scan_speed: float,
                                trigger_step: float = 0.0) -> None:
         """
         Sets the logging parameter of the MPM instrument.
 
         Parameters:
-            start_wavelength (float): The starting wavelength for the sweep.
-            stop_wavelength (float): The stopping wavelength for the sweep.
-            sweep_step (float): The step wavelength of a sweep.
-            sweep_speed (float): The speed of a sweep.
+            start_wavelength (float): The starting wavelength for the scan.
+            stop_wavelength (float): The stopping wavelength for the scan.
+            scan_step (float): The step wavelength of a scan.
+            scan_speed (float): The speed of a scan.
             trigger_step (float): (Not necessary value) The step size (nm) between two TSL triggers.
                                 Default value: 0.0
 
@@ -405,12 +406,12 @@ class MpmInstrument(MpmData):
             InstrumentError: If setting the logging parameters to the MPM fails.
         """
         self.logger.info(f"Set MPM logging params: start_wavelength={start_wavelength}, stop_wavelength={stop_wavelength}, "
-                    f"sweep_step={sweep_step}, sweep_speed={sweep_speed}, trigger_step={trigger_step}")
+                    f"scan_step={scan_step}, scan_speed={scan_speed}, trigger_step={trigger_step}")
         error_code = self._instrument.Set_Logging_Paremeter_for_STS(start_wavelength,
                                                              stop_wavelength,
-                                                             sweep_step,
+                                                             scan_step,
                                                              trigger_step,
-                                                             sweep_speed,
+                                                             scan_speed,
                                                              self._instrument.Measurement_Mode.Freerun)
 
         if error_code != 0:
