@@ -11,9 +11,9 @@ from array import array
 from datetime import datetime
 
 # Importing STS process and instrument classes
-from python_il_sts.measurements.sts_process import StsProcess
-from python_il_sts.instruments.tsl_instrument import TslInstrument
-from python_il_sts.utils.error_handling_class import sts_process_error_strings, STSProcessError
+from ..measurements.sts_process import StsProcess
+from ..instruments.tsl_instrument import TslInstrument
+from ..utils.error_handling_class import sts_process_error_strings, STSProcessError
 
 now = datetime.now()        # Get the current date and time
 formatted_datetime = now.strftime("%Y%m%d_%Hhr%Mm%Ssec")        # Format the date and time as YYYY-MM-DD HH:MM:SS

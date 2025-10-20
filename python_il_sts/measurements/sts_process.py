@@ -7,16 +7,14 @@ import time
 from array import array
 from dataclasses import dataclass
 
+from ..instruments.daq_instrument import DaqInstrument
+from ..instruments.mpm_instrument import MpmInstrument
+from ..instruments.tsl_instrument import TslInstrument
+from ..utils.error_handling_class import STSProcessError, sts_process_error_strings
 from ..drivers.santec_wrapper import ILSTS, PDLSTS, RescalingMode, STSDataStruct, STSDataStructForMerge, ModuleType
 
-# Importing instrument classes and sts error strings
-from python_il_sts.instruments.daq_instrument import DaqInstrument
-from python_il_sts.instruments.mpm_instrument import MpmInstrument
-from python_il_sts.instruments.tsl_instrument import TslInstrument
-from python_il_sts.utils.error_handling_class import STSProcessError, sts_process_error_strings
-
 # Import program logger
-from python_il_sts.logger import get_logger
+from ..logger import get_logger
 logger = get_logger("STS Process Class.")
 
 
@@ -63,13 +61,13 @@ class StsProcess(STSData):
     def __init__(self,
                  tsl: TslInstrument,
                  mpm: MpmInstrument,
-                 daq: DaqInstrument = None):
-        logger.info("Initializing STS Process class.")
+                 daq: DaqInstrument | None = None):
+        logger.info(__class__.__name__)
         self._tsl = tsl
         self._mpm = mpm
         self._daq = daq
         self._ilsts = PDLSTS()
-        logger.info(f"STS Process details, TslInstrument: {tsl}, MpmInstrument: {mpm}, DaqDevice: {daq}")
+        logger.info(f"TslInstrument: {tsl}, MpmInstrument: {mpm}, DaqDevice: {daq}")
 
     @property
     def il_sts(self) -> ILSTS:
