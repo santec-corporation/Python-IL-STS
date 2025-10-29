@@ -1,8 +1,22 @@
 """
-Python IL STS process.
+Python IL STS.
+
+Supported Instruments / Devices
+    TSL-570 (Any Type)
+    MPM-210H & MPM-220
+    DAQ (NI USB-6210)
+
+Platform & Requirements
+    OS: Windows 10+
+    Python: 3.10+
+    .NET Framework 4.5.2+
+    NI-488.2 for GPIB devices
+    NI-VISA for GPIB devices
+    NI-DAQmx for DAQ devices
+Optional: NI-MAX for configuring/test-running connected devices.
 """
 
-
+# Import the dll loader function.
 from .drivers import load_dlls
 
 # Get and initialize the logger
