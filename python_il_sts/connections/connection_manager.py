@@ -3,20 +3,27 @@
 Instrument Manager.
 """
 
+# Basic imports.
+from typing import Dict
+
+# Python IL STS imports.
+from .get_instruments import GetInstruments
 from ..instruments.base_instrument import BaseInstrument
-from ..instruments.daq_instrument import DaqInstrument
 from ..instruments.tsl_instrument import TslInstrument
 from ..instruments.mpm_instrument import MpmInstrument
-from ..drivers.santec_wrapper import ConnectionType, GPIBType, Terminator, MainCommunication, DAQ
+from ..instruments.daq_instrument import DaqInstrument
+from ..drivers.santec_wrapper import (ConnectionType, GPIBType,
+                                      Terminator, MainCommunication, DAQ)
 from ..utils.error_handling import InstrumentError, instrument_error_strings
 
-from .get_instruments import GetInstruments
-
-from typing import Dict
+# Import program logger.
 from ..logger import get_logger
 
 
+# Initialize the Santec Main communication class.
 main_communication = MainCommunication()
+
+# Initialize the Santec DAQ class.
 daq = DAQ()
 
 

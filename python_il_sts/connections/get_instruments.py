@@ -4,15 +4,20 @@ Get Instrument Addresses.
 Connection modes: GPIB, LAN and USB.
 """
 
-import pyvisa
-import nidaqmx
+# Basic imports.
 from dataclasses import dataclass
 
+# Import PyVISA and NIDAQmx Python modules.
+import pyvisa
+import nidaqmx
+
+# Python IL STS imports.
 from ..drivers.santec_wrapper import MainCommunication
 
-# Import program logger
+# Import program logger.
 from ..logger import get_logger
 
+# Initialize and list the GPIB and DAQ resources.
 _resource_manager = pyvisa.ResourceManager()  # Initializing pyvisa resource manager class
 _resources = _resource_manager.list_resources()  # Getting a list of all detected instruments
 _system = nidaqmx.system.System.local()  # Getting a list of all detected DAQ devices
@@ -20,6 +25,7 @@ _system = nidaqmx.system.System.local()  # Getting a list of all detected DAQ de
 
 @dataclass
 class Instrument:
+    """ Instrument class."""
     idn: str = ""
     name: str = ""
     resource: str = ""
