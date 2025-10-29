@@ -1,6 +1,9 @@
+"""
+Python IL STS - Connection example.
+"""
 
-
-from python_il_sts.connections.connection_manager import ConnectionManager
+# Import the connection manager class from python_il_sts.
+from python_il_sts import ConnectionManager
 
 connect = ConnectionManager()
 

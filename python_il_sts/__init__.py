@@ -20,18 +20,21 @@ except Exception as e:
 
 # Import santec modules
 from .connections.get_instruments import GetInstruments
+from .connections.connection_manager import ConnectionManager
 from .measurements.sts_process import StsProcess
 from .instruments.daq_instrument import DaqInstrument
 from .instruments.tsl_instrument import TslInstrument
 from .instruments.mpm_instrument import MpmInstrument
-from .utils import file_saving
+from .utils import data_utils, plot_utils
 
 
 __all__ = [
-    "StsProcess",
+    "GetInstruments",
+    "ConnectionManager",
     "TslInstrument",
     "MpmInstrument",
     "DaqInstrument",
-    "GetInstruments",
-    "file_saving"
+    "StsProcess",
+    "data_utils",
+    "plot_utils"
 ]

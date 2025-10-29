@@ -1,53 +1,65 @@
 """
-Created on Wed 05 17:17:26 2024
-
-@organization: santec holdings corp.
+Python IL STS - Query / Write example.
 """
 
-# Importing high-level santec package and its modules
-from python_il_sts import TslInstrument, MpmInstrument, GetInstruments
-
-# Initializing get instrument address class
-device_address = GetInstruments()
+# Import the basic modules from python_il_sts
+from python_il_sts import ConnectionManager, TslInstrument, MpmInstrument
 
 
-def main():
-    """ Main method of this project """
+def tsl():
+    tsl_resource = ""
+    tsl_instrument: TslInstrument
 
-    tsl: TslInstrument
-    mpm: MpmInstrument
+    connection_manager = ConnectionManager()
+    instrument_list = connection_manager.list_instruments()
 
-    device_address.list_instruments()
-    tsl_address = device_address.get_tsl_address()
-    mpm_address = device_address.get_mpm_address()
+    print("List of Instruments: ", instrument_list)
 
-    # Only connect to the devices that the user wants to connect
-    tsl = TslInstrument(instrument=tsl_address)
-    tsl.connect()
+    for dev in instrument_list:
+        if "TSL" in dev:
+            tsl_resource = dev
 
-    mpm = MpmInstrument(instrument=mpm_address)
-    mpm.connect()
+    if tsl_resource == "":
+        raise Exception("TSL instrument not connected. Please connect the TSL.")
 
-    # TSL Query / Write example
+    tsl_instrument = connection_manager.connect_tsl(tsl_resource)
+
     # Write to TSL
-    status = tsl.write('POW 5')       # Sets TSL output power to 5
-    print(status)               # Prints 0 if write was successful
+    tsl_instrument.write('POW 5')
 
     # Query TSL
-    status, response = tsl.query('POW?')        # Gets TSL output power
+    status, response = tsl_instrument.query('POW?')        # Gets TSL output power
     print(status)             # Prints status 0 if a query was successful
     print(response)           # Prints query response
 
-    # MPM Query / Write example
+
+def mpm():
+    mpm_resource = ""
+    mpm_instrument: MpmInstrument
+
+    connection_manager = ConnectionManager()
+    instrument_list = connection_manager.list_instruments()
+
+    print("List of Instruments: ", instrument_list)
+
+    for dev in instrument_list:
+        if "MPM" in dev:
+            mpm_resource = dev
+
+    if mpm_resource == "":
+        raise Exception("MPM instrument not connected. Please connect the MPM.")
+
+    mpm_instrument = connection_manager.connect_mpm(mpm_resource)
+
     # Write to MPM
-    status = mpm.write('AVG 5')    # Sets MPM averaging time to 5
-    print(status)  # Prints 0 if write was successful
+    mpm_instrument.write('AVG 5')
 
     # Query MPM
-    status, response = mpm.query('AVG?')  # Gets MPM averaging time
+    status, response = mpm_instrument.query('AVG?')  # Gets MPM averaging time
     print(status)  # Prints status 0 if a query was successful
     print(response)  # Prints query response
 
 
 if __name__ == '__main__':
-    main()
+    tsl()
+    mpm()

@@ -6,7 +6,7 @@ from ..drivers.santec_wrapper import MPM
 from .base_instrument import BaseInstrument
 
 # Importing instrument error strings
-from ..utils.error_handling_class import InstrumentError, instrument_error_strings
+from ..utils.error_handling import InstrumentError, instrument_error_strings
 
 # Import program logger
 from ..logger import get_logger
@@ -35,15 +35,8 @@ class ModuleData:
 
 class MpmData:
     """
-    A class to represent the data for an MPM.
-
-    Attributes:
-        averaging_time (float): The averaging time of the MPM.
-        range_data (list): The list of dynamic_range count values of an MPM module.
-        modules (list): The list of modules of an MPM.
+    MPM data class.
     """
-    averaging_time: float = 0.0
-    range_data: list = []
     modules: list = []
     dynamic_ranges = [
         '-30 ~ +10dBm',
@@ -93,6 +86,17 @@ class MpmInstrument(MpmData, BaseInstrument):
             raise Exception("No modules were detected.")
         self.logger.info(f"Detected MPM modules: {self.modules}")
         return self.modules
+
+    def mpm_215_selection_check(self, selected_channels) -> bool:
+        """ Checks if an MPM-215 module is present and returns a boolean. """
+        modules_info = self.modules
+        use_mpm_215_flag = False
+
+        for selection in selected_channels:
+            module_no = int(selection[0])
+            if modules_info[module_no].module_type == 'MPM-215':
+                use_mpm_215_flag = True
+        return use_mpm_215_flag
 
     def check_module_type(self) -> tuple[bool, bool]:
         """
@@ -170,7 +174,7 @@ class MpmInstrument(MpmData, BaseInstrument):
         self.logger.info(f"MPM module 212: {check}")
         return check
 
-    def get_range(self) -> None:
+    def get_range(self):
         """
         Gets the measurement dynamic dynamic_range of the MPM module.
         Depending on the module type, the dynamic dynamic_range varies.
@@ -183,15 +187,15 @@ class MpmInstrument(MpmData, BaseInstrument):
                     if other modules: [1,2,3,4,5]
         """
         self.logger.info("MPM get dynamic ranges of modules")
-        self.range_data = []
         if self.check_mpm_215:
-            self.range_data = [1]
+            available_ranges = [1]
         elif self.check_mpm_213:
             # 213 have 4 ranges
-            self.range_data = [1, 2, 3, 4]
+            available_ranges = [1, 2, 3, 4]
         else:
-            self.range_data = [1, 2, 3, 4, 5]
-        self.logger.info(f"MPM dynamic_range data: {self.range_data}")
+            available_ranges = [1, 2, 3, 4, 5]
+        self.logger.info(f"MPM dynamic_range data: {available_ranges}")
+        return available_ranges
 
     def set_range(self, power_range: int) -> None:
         """
@@ -293,14 +297,14 @@ class MpmInstrument(MpmData, BaseInstrument):
             float: Averaging time of the MPM.
         """
         self.logger.info("MPM get averaging time")
-        error_code, self.averaging_time = self._instrument.Get_Averaging_Time(0)
+        error_code, averaging_time = self._instrument.Get_Averaging_Time(0)
 
         if error_code != 0:
             self.logger.error("Error while getting MPM averaging time, ",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
-        self.logger.info(f"MPM averaging time: {self.averaging_time}")
-        return self.averaging_time
+        self.logger.info(f"MPM averaging time: {averaging_time}")
+        return averaging_time
 
     def logging_start(self) -> None:
         """

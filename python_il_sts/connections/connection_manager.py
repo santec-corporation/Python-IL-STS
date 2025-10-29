@@ -8,7 +8,7 @@ from ..instruments.daq_instrument import DaqInstrument
 from ..instruments.tsl_instrument import TslInstrument
 from ..instruments.mpm_instrument import MpmInstrument
 from ..drivers.santec_wrapper import ConnectionType, GPIBType, Terminator, MainCommunication, DAQ
-from ..utils.error_handling_class import InstrumentError, instrument_error_strings
+from ..utils.error_handling import InstrumentError, instrument_error_strings
 
 from .get_instruments import GetInstruments
 
@@ -79,23 +79,27 @@ class ConnectionManager(GetInstruments):
 
         match connection_type:
             case ConnectionType.GPIB:
-                return self._gpib_connection(instrument, resource_name, terminator)
+                self._gpib_connection(instrument, resource_name, terminator)
             case ConnectionType.USB:
-                return self._usb_connection(instrument, resource_name, terminator)
+                self._usb_connection(instrument, resource_name, terminator)
             case ConnectionType.TCPIP:
-                return self._tcpip_connection(instrument, resource_name, terminator)
+                self._tcpip_connection(instrument, resource_name, terminator)
             case ConnectionType.NULL:
                 raise Exception(f"Invalid connection type: {connection_type}")
-        return None
+
+        print(f"Connected to {instrument.product_name}. Serial number: {instrument.serial_number}")
+        return instrument
 
     def connect_tsl(self, resource_name) -> TslInstrument | None:
         terminator = Terminator.CR
         instrument = TslInstrument()
+        resource_name = self._instruments.get(resource_name)
         return self._establish_connection(instrument, resource_name, terminator)
 
     def connect_mpm(self, resource_name) -> MpmInstrument | None:
         terminator = Terminator.LF
         instrument = MpmInstrument()
+        resource_name = self._instruments.get(resource_name)
         return self._establish_connection(instrument, resource_name, terminator)
 
     def _connect_daq(self, device_name: str) -> DaqInstrument | None:
@@ -117,6 +121,7 @@ class ConnectionManager(GetInstruments):
                                 str(error_code) + ": " + instrument_error_strings(error_code))
                 raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
 
+            print(f"Connected to DAQ: {instrument.product_name}.")
             return instrument
         except InstrumentError as e:
             print(f"Error occurred: {e}")
@@ -143,7 +148,6 @@ class ConnectionManager(GetInstruments):
                     f"with GPIB{gpib_board}::{gpib_address}",
                     error_code,
                 )
-            return instrument
         except Exception as e:
             raise InstrumentError(
                 f"Error connecting to GPIB{gpib_board}::{gpib_address}",

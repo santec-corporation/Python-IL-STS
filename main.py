@@ -1,133 +1,111 @@
 """
-Python IL STS
+Python program to run
+the Santec IL STS operation.
 """
 
-import os
-import json
-import time
-import numpy as np
-import matplotlib.pyplot as plt
+# Basic imports
+import re, time
 
-# Importing modules from the santec directory
-from python_il_sts.connections.connection_manager import ConnectionManager
-from python_il_sts import TslInstrument, MpmInstrument, DaqInstrument, StsProcess, file_saving
+# Importing the basic modules from the python_il_sts directory.
+from python_il_sts import (ConnectionManager, TslInstrument, MpmInstrument, DaqInstrument,
+                           StsProcess, data_utils, plot_utils)
 
-
+# Define Constants.
 DWELL_TIME_CONSTANT = 10
 MILLISECONDS_TO_SECONDS_CONSTANT = 1000
 
 
+def set_all_channels(modules, selected_channels):
+    """ Selects all modules and all channels that are connected to MPM. """
+    for module in modules:
+        for channel_number in module.channels:
+            selected_channels.append([module.module_number, channel_number])
 
-def prompt_and_get_previous_param_data(file_last_scan_params: str) -> dict | None:
+
+def set_even_channels(modules, selected_channels) -> None:
+    """ Selects only even channels on the MPM. """
+    for module in modules:
+        for channel_number in module.channels:
+            if channel_number % 2 == 0:
+                selected_channels.append([module.module_number, channel_number])
+
+
+def set_odd_channels(modules, selected_channels) -> None:
+    """ Selects only odd channels on the MPM. """
+    for module in modules:
+        for channel_number in module.channels:
+            if channel_number % 2 != 0:
+                selected_channels.append([module.module_number, channel_number])
+
+
+def set_special_channels(modules, selected_channels) -> None:
+    """ Manually enter/select the channels to be measured. """
+    selection = input("Input (module,channel) to be tested [ex: (1,1); (2,1)]  ")
+    selection = re.findall(r"[\w']+", selection)
+
+    i = 0
+    while i <= len(selection) - 1:
+        selected_channels.append([f"{int(selection[i]) - 1}", selection[i + 1]])
+        i += 2
+
+
+def select_mpm_channels(mpm):
     """
-    Prompt user to load previous parameter settings if available.
-
-    Parameters:
-        file_last_scan_params (str): Path to the file containing last scan parameters.
-
-    Returns:
-        dict: Previous settings loaded from the file, or None if not available.
+    Select the channels to be measured.
+    It offers the user to choose between different ways to select MPM channels.
     """
-    if not os.path.exists(file_last_scan_params):
-        return None
+    selected_channels = []
+    modules = mpm.get_modules()
 
-    ans = input("\nWould you like to load the most recent parameter settings from {}? [y|n]: "
-                .format(file_last_scan_params))
-    if ans not in "Yy":
-        return None
+    print("\nAvailable modules/channels:")
+    for module in modules:
+        if module.module_type is None:
+            continue
+        print("\r" + "Module No. {}: {} - Channels: {}"
+              .format(module.module_number, module.module_type, module.channels))
 
-    # Load the json data.
-    with open(file_last_scan_params, encoding='utf-8') as json_file:
-        previous_settings = json.load(json_file)
+    mpm_choices = {'1': set_all_channels,
+                   '2': set_even_channels,
+                   '3': set_odd_channels,
+                   '4': set_special_channels}
 
-    return previous_settings
+    print("""\nChannels measurement options:
+              1. All channels
+              2. Even channels
+              3. Odd channels
+              4. Specific channels""")
+
+    user_selection = input("\nSelect channels to be measured: ")
+    mpm_choices[user_selection](modules, selected_channels)
+
+    return selected_channels
 
 
-def prompt_and_get_previous_reference_data() -> dict | None:
+def select_dynamic_ranges(mpm):
     """
-    Ask user if they want to use the previous reference data if it exists.
-
-    Returns:
-        dict: Previous reference data loaded from the file,
-        None: if reference data is not available.
+    Select the optical dynamic range of the MPM.
     """
-    if not os.path.exists(file_saving.FILE_LAST_SCAN_REFERENCE_DATA):
-        return None
+    print("\nAvailable dynamic ranges:")
+    for i in range(5):
+        print('{}. {}'.format(i + 1, mpm.dynamic_ranges[i]))
+    selection = input("Select a dynamic dynamic_range (Ex: 1,2,3): ")
+    selected_ranges = re.findall(r"[\w']+", selection)
 
-    ans = input("\nWould you like to use the most recent reference data from file '{}'? [y|n]: "
-                .format(file_saving.FILE_LAST_SCAN_REFERENCE_DATA))
-
-    if ans not in "Yy":
-        return None
-
-    # Get the file size.
-    int_file_size = int(os.path.getsize(file_saving.FILE_LAST_SCAN_REFERENCE_DATA))
-    str_file_size = f"{int_file_size / 1000000:.2f} MB" if int_file_size > 1000000 else f"{int_file_size / 1000:.2f} KB"
-
-    print("Opening " + str_file_size + " file '" + file_saving.FILE_LAST_SCAN_REFERENCE_DATA + "'...")
-    with open(file_saving.FILE_LAST_SCAN_REFERENCE_DATA, 'r', encoding='utf-8') as file:
-        data = file.read()
-        previous_reference = json.loads(data)
-    return previous_reference
+    # Convert the string ranges to ints, because that is what the DLL is expecting.
+    selected_ranges = [int(i) for i in selected_ranges]
+    return selected_ranges
 
 
-def save_all_data(ilsts: StsProcess) -> None:
-    """
-    Save measurement and reference data to files.
+def save_scan_data(ilsts: StsProcess) -> None:
+    """ Save measurement and reference data to files. """
+    # Save the reference scan result data.
+    data_utils.save_reference_result_data(ilsts)
 
-    Parameters:
-        ilsts (StsProcess): Instance of the ILSTS class.
+    # Save the measurement scan data.
+    data_utils.save_dut_result_data(ilsts)
 
-    Returns:
-        None
-    """
-    print("\n")
-    # Saving reference data to file
-    file_saving.save_reference_data(ilsts, file_saving.FILE_LAST_SCAN_REFERENCE_DATA)
-
-    print("Saving Reference data csv to file " + file_saving.FILE_REFERENCE_DATA_RESULTS + "...")
-    file_saving.save_reference_result_data(ilsts, file_saving.FILE_REFERENCE_DATA_RESULTS)
-
-    print("Saving Raw data to csv file " + file_saving.FILE_RAW_DATA_RESULTS + "...")
-    file_saving.save_dut_result_data(ilsts, file_saving.FILE_RAW_DATA_RESULTS)
-
-    print("Saving IL data to csv file " + file_saving.FILE_IL_DATA_RESULTS + "...")
-    file_saving.save_measurement_data(ilsts, file_saving.FILE_IL_DATA_RESULTS)
-
-
-def plot_wavelength_dependent_loss(wavelength: list, il_data: list):
-    """
-    Plot the Wavelength-Dependent Loss results.
-
-    Args:
-        wavelength (list): Array of wavelength values.
-        il_data (list): Array of Insertion loss values.
-    """
-    try:
-        plt.plot(wavelength, il_data)
-        plt.show()
-    except Exception as e:
-        print(f"Error while displaying graph, {e}")
-
-
-def plot_power_reading(power_array, power_reading):
-    """
-    Plot the power scan results.
-
-    Args:
-        power_array (list): Array of power values.
-        power_reading (list): Corresponding power readings.
-    """
-    try:
-        print("Displaying power scan results.")
-        plt.plot(power_array, power_reading)
-        max_y_axis = max(power_reading)
-        min_y_axis = min(power_reading)
-        step_y_axis = (max_y_axis - min_y_axis) / 10
-        plt.yticks(np.arange(min_y_axis, max_y_axis, step_y_axis))
-        plt.show()
-    except Exception as e:
-        print(f"Error while displaying power scan results, {e}")
+    # Save the IL data.
+    data_utils.save_il_data(ilsts)
 
 
 def connection():
@@ -143,6 +121,8 @@ def connection():
     connection_manager = ConnectionManager()
     instrument_list = connection_manager.list_instruments()
 
+    print("List of Instruments: ", instrument_list)
+
     for dev in instrument_list:
         if "TSL" in dev:
             tsl_resource = dev
@@ -150,6 +130,11 @@ def connection():
             mpm_resource = dev
         elif "Dev" in dev:
             daq_resource = dev
+
+    if tsl_resource == "":
+        raise Exception("TSL instrument not connected. Please connect the TSL.")
+    elif mpm_resource == "":
+        raise Exception("MPM instrument not connected. Please connect the MPM.")
 
     tsl_instrument = connection_manager.connect_tsl(tsl_resource)
     mpm_instrument = connection_manager.connect_mpm(mpm_resource)
@@ -161,106 +146,105 @@ def connection():
 
 
 def tsl_power_check(tsl: TslInstrument):
-    """ Check and limit TSL power to 5dBm. """
-    current_set_power = tsl.power
-    power = 0.00
-    if current_set_power > 5.00:
-        print("\nPower value should not be greater than 5 dBm.")
-        power = float(input("Please input Output Power (dBm) again: "))
-        while power > 5.00:
-            print("\nInvalid value of Output Power ( <=5 dBm )")
-            power = float(input("Please input Output Power (dBm): "))
+    """ Set the TSL power to 5 dBm or less. """
+    power = float(input("Please input the Output Power (dBm): "))
+    while power > 5.00:
+        print("\nPower should be less than or equal to 5 dBm.")
+        power = float(input("Please input the Output Power (dBm) again: "))
 
     tsl.set_power(power)
 
 
-def wavelength_dependent_loss(tsl: TslInstrument, mpm: MpmInstrument, daq: DaqInstrument | None):
+def wavelength_dependent_loss(
+        tsl: TslInstrument,
+        mpm: MpmInstrument,
+        daq: DaqInstrument | None):
     """
     Perform the wavelength-dependent loss measurement.
-
-    Args:
-        tsl: The tsl instrument.
-        mpm: The mpm instrument.
-        daq: The daq device.
     """
-    # Set the TSL properties
-    previous_parameter_data = prompt_and_get_previous_param_data(file_saving.FILE_LAST_SCAN_PARAMS)
+    is_tsl_570 = True
+    if tsl.get_tsl_type_flag():
+        is_tsl_570 = False
 
-    # Initiate and run the ILSTS
+    scan_parameters = {}
+    is_scan_parameters_loaded = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
+
+    start_wavelength = scan_parameters["start_wavelength"]
+    stop_wavelength = scan_parameters["stop_wavelength"]
+    scan_step = scan_parameters["scan_step"]
+    power = scan_parameters["power"]
+    scan_speed = scan_parameters["scan_speed"]
+    scan_cycles = scan_parameters["scan_cycles"]
+    scan_delay = scan_parameters["scan_delay"]
+
+    # Select the MPM module, channel and dynamic range.
+    selected_channels = select_mpm_channels(mpm)
+    selected_ranges = select_dynamic_ranges(mpm)
+
+    # Create an instance and initialize the STS process class.
     ilsts = StsProcess(tsl, mpm, daq)
-    ilsts.setting_tsl_scan_params(previous_parameter_data)
 
-    # Select channels to be measured.
-    ilsts.set_selected_channels(previous_parameter_data)
-    if ilsts.mpm_215_selection_check():
+    # Set the parameters.
+    ilsts.set_parameters(start_wavelength, stop_wavelength, scan_step, power, scan_speed,
+                         selected_channels, selected_ranges)
+
+    if mpm.mpm_215_selection_check(selected_channels):
         tsl_power_check(tsl)
         ilsts.selected_ranges = [2]
-    else:
-        ilsts.set_selected_ranges(previous_parameter_data)
 
-    # Set scan parameters to MPM and DAQ
-    ilsts.set_parameters()
+    # Load reference scan data if available
+    reference_scan_data = (
+        data_utils.import_reference_scan_data() if is_scan_parameters_loaded else None
+    )
 
-    # Check for previously saved reference data
-    previous_ref_data_array = None
-    if previous_parameter_data:
-        previous_ref_data_array = prompt_and_get_previous_reference_data()
-    if previous_ref_data_array:
-        ilsts.reference_data_array = previous_ref_data_array
-
-    # Saving parameters to file
-    if not previous_parameter_data:
-        file_saving.save_sts_parameter_data(tsl, ilsts, file_saving.FILE_LAST_SCAN_PARAMS)
-
-    # Run a reference scan if previously saved reference data not found
-    if len(ilsts.reference_data_array) == 0:
-        print("\nConnect for Reference measurement and press ENTER")
-        print("Reference process:")
-        # IL STS reference scan
-        ilsts.sts_reference()
+    # Check if reference scan data exists or not
+    if not reference_scan_data:
+        input("\nConnect for Reference measurement and press ENTER")
+        print("Reference process...")
+        ilsts.reference_scan()
     else:
         print("Loading reference data...")
-        ilsts.sts_reference_from_saved_file()
+        ilsts.load_reference_scan_data(reference_scan_data)
 
-    # Perform the scan operation
-    ans = "y"
-    while ans in "yY":
-        print("\nDUT measurement")
-        while True:
-            reps = int(input("Input DUT scan repeat count (greater than 0): "))
-            if reps > 0:
-                break
-            print("Invalid repeat count, enter a positive number.\n")
+    # Measurement scan operation.
+    print("\nMeasurement process...")
+    user_response = "y"
+    while user_response in "yY":
         input("Connect the DUT and press ENTER")
-        for i in range(reps):
+        for i in range(scan_cycles):
             scan_index = i + 1
-            print("\nScan {} of {}...".format(str(scan_index), reps))
+            print("\nScan {} of {}...".format(str(scan_index), scan_cycles))
 
-            # IL STS measurement scan
-            ilsts.sts_measurement()
+            ilsts.measurement_scan()
 
             user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
             if user_map_display == "y":
-                plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
+                plot_utils.plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
 
-            if reps > 1 and scan_index < reps:
+            time.sleep(scan_delay)
+
+            if scan_cycles > 1 and scan_index < scan_cycles:
                 input(f"\nPress ENTER to continue to Scan {scan_index + 1}...")
-        ilsts.get_dut_data()  # Get and store DUT scan data
 
-        ans = input("\nRedo Scan ? (y/n): ")
+        ilsts.get_dut_data()
 
-    save_all_data(ilsts)
+        user_response = input("\nRedo Scan ? (y/n): ")
+
+    # Disconnect the instruments.
+    ilsts.disconnect_instruments()
+
+    # Save the scan parameters.
+    data_utils.export_scan_parameters(scan_parameters)
+
+    # Save the reference scan data.
+    data_utils.export_reference_data(ilsts)
+
+    # Save the scan data.
+    save_scan_data(ilsts)
 
 
-
-def power_scan(tsl, mpm):
-    """
-    Perform a power scan measurement.
-
-    Args:
-        tsl: The tsl device.
-        mpm: The powermeter (mpm).
-    """
+def power_scan(tsl: TslInstrument, mpm: MpmInstrument):
+    """ Performs a power scan measurement. """
     # MPM setting
     mpm_mod, mpm_chan = input('\nSelect Powermeter Module and Channel (Ex: Module,Channel => 0,1): ').split(',')
     avg_time = float(input('Set Averaging time for the powermeter (0.01~10000.00) [msec]: '))
@@ -290,18 +274,17 @@ def power_scan(tsl, mpm):
         power_array.append(actual_pow)
 
         # Read power from the MPM
-        raw_pow = mpm.query(f'READ? {mpm_mod}')[1].split(',')
-        power_reading.append(
-            float(raw_pow[int(mpm_chan) - 1]))  # Channels are from 1 to 4 and arrays are from 0 to 3, thus "-1"
+        raw_power = mpm.query(f'READ? {mpm_mod}')[1].split(',')
+        power_reading.append(float(raw_power[int(mpm_chan) - 1]))
         time.sleep(dwell_time)
         actual_pow = round(actual_pow + step_pow, 2)
         tsl.write(f'POW {actual_pow}')
 
-    # Plot results
-    plot_power_reading(power_array, power_reading)
+    # Plot the results.
+    plot_utils.plot_power_reading(power_array, power_reading)
 
-    print("\nSaving power scan data to file " + file_saving.FILE_POWER_SCAN_RESULTS + "...")
-    file_saving.save_power_scan_results(power_array, power_reading, file_saving.FILE_POWER_SCAN_RESULTS)
+    # Save the power scan results.
+    data_utils.save_power_scan_results(power_array, power_reading)
 
 
 def main() -> None:
