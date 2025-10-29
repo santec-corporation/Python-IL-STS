@@ -1,8 +1,7 @@
 """
-Santec DLLs Wrapper.
-
-- Instrument DLL wrapper.
-- STS Process DLL wrapper.
+Santec DLL Wrapper.
+    - Instrument DLL wrapper.
+    - STS Process DLL wrapper.
 """
 
 
@@ -31,19 +30,16 @@ ExceptionCode = Santec.ExceptionCode
 
 class TSL(Santec.TSL):
     """Wrapper for the Santec TSL instrument."""
-
     pass
 
 
 class MPM(Santec.MPM):
     """Wrapper for the Santec MPM instrument."""
-
     pass
 
 
 class DAQ(Santec.SPU):
     """Wrapper for the Santec DAQ (SPU Class) instrument."""
-
     pass
 
 

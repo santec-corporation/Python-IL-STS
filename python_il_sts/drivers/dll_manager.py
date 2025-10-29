@@ -1,5 +1,5 @@
 """
-Python IL STS DLL Manager.
+Python IL STS - DLL Manager.
 
 - Load the Santec DLLs from the default STS application path.
 - Load the Santec DLLs from the user AppData path.
@@ -17,7 +17,6 @@ logger = get_logger(__name__)
 
 class UnsupportedPlatformError(OSError):
     """Raised when Python IL STS is imported on a non-Windows platform."""
-
     pass
 
 
@@ -51,11 +50,11 @@ def load_dlls():
     """Gets the path where the DLLs exist."""
     if dlls_exist(SYSTEM_DLL_PATH):
         dll_path = SYSTEM_DLL_PATH
-        logger.debug(f"Found DLLs in: {dll_path}")
+        logger.info(f"Found DLLs in: {dll_path}")
 
     elif dlls_exist(APPDATA_DLL_PATH):
         dll_path = APPDATA_DLL_PATH
-        logger.debug(f"Found DLLs in AppData: {dll_path}")
+        logger.info(f"Found DLLs in AppData: {dll_path}")
     else:
         raise RuntimeError("DLLs not found.")
 
@@ -75,14 +74,14 @@ def setup_dlls(dll_path, dlls=None):
     for dll in dlls:
         try:
             full_path = os.path.join(dll_path, dll)
-            logger.debug(f"Loading DLL: {full_path}")
+            logger.info(f"Loading DLL: {full_path}")
 
             # Attempt to load the DLL
             clr.AddReference(full_path)
 
-            logger.debug(f"DLL Loaded: {dll}")
+            logger.info(f"DLL Loaded: {dll}")
 
         except Exception as e:
-            logger.debug(f"Error loading DLL '{dll}': {e}")
+            logger.info(f"Error loading DLL '{dll}': {e}")
             return False  # Stop on first failure
     return True  # Only returns True if all DLLs are loaded successfully
