@@ -136,10 +136,11 @@ class GetInstruments:
     @staticmethod
     def sort_devices(instruments: list) -> None:
         """
-        Sorts the instrument list by the type of instrument (TSL vs. MPM)
+        Sorts the instrument list by the type of instrument
         and prints the sorted list of detected instruments.
 
         Parameters:
             instruments (list): The list containing detected instruments.
         """
         instruments.sort(key=lambda x: x.idn.startswith('SANTEC,MPM'))
+        instruments.sort(key=lambda x: x.resource.startswith('Dev'))
