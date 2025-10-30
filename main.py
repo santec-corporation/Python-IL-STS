@@ -3,101 +3,103 @@ Python program to run
 the Santec IL STS operation.
 """
 
-# Basic imports
+# Basic imports.
 import re, time
+from typing import List, Any, Optional, Tuple
 
 # Importing the basic modules from the python_il_sts directory.
 from python_il_sts import (ConnectionManager, TslInstrument, MpmInstrument, DaqInstrument,
                            StsProcess, data_utils, plot_utils)
 
 # Define Constants.
-DWELL_TIME_CONSTANT = 10
-MILLISECONDS_TO_SECONDS_CONSTANT = 1000
+DWELL_TIME_FACTOR = 10.0  # dwell time = factor × averaging time
+MS_TO_SEC = 1000.0
 
 
-def set_all_channels(modules, selected_channels):
-    """ Selects all modules and all channels that are connected to MPM. """
-    for module in modules:
-        for channel_number in module.channels:
-            selected_channels.append([module.module_number, channel_number])
+def _filter_channels(modules: List[Any], predicate) -> List[List[int]]:
+    """Helper: return module/channel pairs satisfying predicate."""
+    return [
+        [module.module_number, ch]
+        for module in modules
+        for ch in module.channels
+        if predicate(ch)
+    ]
 
 
-def set_even_channels(modules, selected_channels) -> None:
-    """ Selects only even channels on the MPM. """
-    for module in modules:
-        for channel_number in module.channels:
-            if channel_number % 2 == 0:
-                selected_channels.append([module.module_number, channel_number])
+def set_all_channels(modules: List[Any]) -> List[List[int]]:
+    """Select all channels from all modules."""
+    return _filter_channels(modules, lambda _: True)
 
 
-def set_odd_channels(modules, selected_channels) -> None:
-    """ Selects only odd channels on the MPM. """
-    for module in modules:
-        for channel_number in module.channels:
-            if channel_number % 2 != 0:
-                selected_channels.append([module.module_number, channel_number])
+def set_even_channels(modules: List[Any]) -> List[List[int]]:
+    """Select only even channels."""
+    return _filter_channels(modules, lambda ch: ch % 2 == 0)
 
 
-def set_special_channels(modules, selected_channels) -> None:
-    """ Manually enter/select the channels to be measured. """
-    selection = input("Input (module,channel) to be tested [ex: (1,1); (2,1)]  ")
-    selection = re.findall(r"[\w']+", selection)
-
-    i = 0
-    while i <= len(selection) - 1:
-        selected_channels.append([f"{int(selection[i]) - 1}", selection[i + 1]])
-        i += 2
+def set_odd_channels(modules: List[Any]) -> List[List[int]]:
+    """Select only odd channels."""
+    return _filter_channels(modules, lambda ch: ch % 2 != 0)
 
 
-def select_mpm_channels(mpm):
+def set_special_channels(modules: List[Any]) -> List[List[int]]:
+    """Manually select specific module/channel pairs."""
+    selection = input("Input (module,channel) pairs [ex: (1,1); (2,1)]: ")
+    tokens = re.findall(r"\d+", selection)
+    if len(tokens) % 2 != 0:
+        print("⚠ Invalid input — must have module/channel pairs.")
+        return []
+
+    return [[int(tokens[i]) - 1, int(tokens[i + 1])] for i in range(0, len(tokens), 2)]
+
+
+def select_mpm_channels(mpm) -> List[List[int]]:
     """
-    Select the channels to be measured.
-    It offers the user to choose between different ways to select MPM channels.
+    Interactively select MPM channels to measure.
+    Returns a list of [module_number, channel_number] pairs.
     """
-    selected_channels = []
     modules = mpm.get_modules()
-
     print("\nAvailable modules/channels:")
     for module in modules:
-        if module.module_type is None:
+        if not module.module_type:
             continue
-        print("\r" + "Module No. {}: {} - Channels: {}"
-              .format(module.module_number, module.module_type, module.channels))
+        print(f"Module {module.module_number}: {module.module_type} - Channels: {module.channels}")
 
-    mpm_choices = {'1': set_all_channels,
-                   '2': set_even_channels,
-                   '3': set_odd_channels,
-                   '4': set_special_channels}
+    choices = {
+        '1': set_all_channels,
+        '2': set_even_channels,
+        '3': set_odd_channels,
+        '4': set_special_channels,
+    }
 
-    print("""\nChannels measurement options:
+    print("""Channels measurement options:
               1. All channels
               2. Even channels
               3. Odd channels
               4. Specific channels""")
 
-    user_selection = input("\nSelect channels to be measured: ")
-    mpm_choices[user_selection](modules, selected_channels)
+    while True:
+        user_choice = input("Select channels to be measured: ").strip()
+        if user_choice in choices:
+            return choices[user_choice](modules)
+        print("⚠ Invalid selection, please enter 1–4.")
 
-    return selected_channels
 
-
-def select_dynamic_ranges(mpm):
-    """
-    Select the optical dynamic range of the MPM.
-    """
+def select_dynamic_ranges(mpm) -> List[int]:
+    """Select optical dynamic ranges for the MPM."""
     print("\nAvailable dynamic ranges:")
-    for i in range(5):
-        print('{}. {}'.format(i + 1, mpm.dynamic_ranges[i]))
-    selection = input("Select a dynamic dynamic_range (Ex: 1,2,3): ")
-    selected_ranges = re.findall(r"[\w']+", selection)
+    for i, rng in enumerate(mpm.dynamic_ranges, start=1):
+        print(f"{i}. {rng}")
 
-    # Convert the string ranges to ints, because that is what the DLL is expecting.
-    selected_ranges = [int(i) for i in selected_ranges]
-    return selected_ranges
+    selection = input("Select dynamic range(s) (e.g., 1,2,3): ")
+    selected = re.findall(r"\d+", selection)
+    return [int(i) for i in selected]
 
 
 def save_scan_data(ilsts: StsProcess) -> None:
     """ Save measurement and reference data to files. """
+    # Save reference scan data as a data file.
+    data_utils.export_reference_data(ilsts)
+
     # Save the reference scan result data.
     data_utils.save_reference_result_data(ilsts)
 
@@ -108,211 +110,275 @@ def save_scan_data(ilsts: StsProcess) -> None:
     data_utils.save_il_data(ilsts)
 
 
-def connection():
-    """ Detect and connect to the TSL, MPM and DAQ instruments. """
-    tsl_resource = ""
-    mpm_resource = ""
-    daq_resource = ""
+def connection() -> Tuple["TslInstrument", "MpmInstrument", Optional["DaqInstrument"]]:
+    """
+    Detect and connect to the TSL, MPM, and (optionally) DAQ instruments.
 
-    tsl_instrument: TslInstrument
-    mpm_instrument: MpmInstrument
-    daq_instrument = DaqInstrument | None
+    Returns:
+        tuple: (tsl_instrument, mpm_instrument, daq_instrument or None)
 
+    Raises:
+        RuntimeError: If required instruments (TSL or MPM) are not found.
+    """
     connection_manager = ConnectionManager()
-    instrument_list = connection_manager.list_instruments()
+    instruments = connection_manager.list_instruments()
 
-    print("List of Instruments: ", instrument_list)
+    print("Detected Instruments:", instruments)
 
-    for dev in instrument_list:
-        if "TSL" in dev:
-            tsl_resource = dev
-        elif "MPM" in dev:
-            mpm_resource = dev
-        elif "Dev" in dev:
-            daq_resource = dev
+    # Identify instruments by name patterns
+    tsl_resource = next((dev for dev in instruments if "TSL" in dev), None)
+    mpm_resource = next((dev for dev in instruments if "MPM" in dev), None)
+    daq_resource = next((dev for dev in instruments if "Dev" in dev), None)
 
-    if tsl_resource == "":
-        raise Exception("TSL instrument not connected. Please connect the TSL.")
-    elif mpm_resource == "":
-        raise Exception("MPM instrument not connected. Please connect the MPM.")
+    # Validation
+    if not tsl_resource:
+        raise RuntimeError("❌ TSL instrument not detected. Please connect the TSL.")
+    if not mpm_resource:
+        raise RuntimeError("❌ MPM instrument not detected. Please connect the MPM.")
 
+    # Connections
     tsl_instrument = connection_manager.connect_tsl(tsl_resource)
     mpm_instrument = connection_manager.connect_mpm(mpm_resource)
 
-    if "210" in mpm_resource:
+    # Optional DAQ connection
+    daq_instrument = None
+    if "210" in mpm_resource and daq_resource:
         daq_instrument = connection_manager.connect(daq_resource)
 
+    print("✅ Instruments successfully connected.")
     return tsl_instrument, mpm_instrument, daq_instrument
 
 
-def tsl_power_check(tsl: TslInstrument):
-    """ Set the TSL power to 5 dBm or less. """
-    power = float(input("Please input the Output Power (dBm): "))
-    while power > 5.00:
-        print("\nPower should be less than or equal to 5 dBm.")
-        power = float(input("Please input the Output Power (dBm) again: "))
+def tsl_power_check(tsl: "TslInstrument") -> None:
+    """Prompt user to set TSL output power to ≤ 5 dBm."""
+    while True:
+        try:
+            power = float(input("Please input the Output Power (dBm): "))
+        except ValueError:
+            print("⚠ Invalid input. Please enter a numeric value.")
+            continue
 
-    tsl.set_power(power)
+        if power <= 5.0:
+            tsl.set_power(power)
+            print(f"✅ Power set to {power:.2f} dBm.")
+            break
+
+        print("\n⚠ Power should be ≤ 5 dBm. Please try again.")
 
 
 def wavelength_dependent_loss(
-        tsl: TslInstrument,
-        mpm: MpmInstrument,
-        daq: DaqInstrument | None):
+    tsl: "TslInstrument",
+    mpm: "MpmInstrument",
+    daq: Optional["DaqInstrument"]
+) -> None:
     """
-    Perform the wavelength-dependent loss measurement.
-    """
-    is_tsl_570 = True
-    if tsl.get_tsl_type_flag():
-        is_tsl_570 = False
+    Perform a wavelength-dependent loss (WDL) measurement.
 
+    Steps:
+      1. Load or request scan parameters.
+      2. Select MPM channels and dynamic ranges.
+      3. Initialize STS process.
+      4. Perform reference and DUT scans.
+      5. Plot, save, and export all results.
+    """
+    # --- Identify TSL type ---
+    is_tsl_570 = not tsl.get_tsl_type_flag()
+
+    # --- Load scan parameters ---
     scan_parameters = {}
-    is_scan_parameters_loaded = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
+    parameters_loaded = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
 
-    start_wavelength = scan_parameters["start_wavelength"]
-    stop_wavelength = scan_parameters["stop_wavelength"]
-    scan_step = scan_parameters["scan_step"]
+    start_wl = scan_parameters["start_wavelength"]
+    stop_wl = scan_parameters["stop_wavelength"]
+    step = scan_parameters["scan_step"]
     power = scan_parameters["power"]
-    scan_speed = scan_parameters["scan_speed"]
-    scan_cycles = scan_parameters["scan_cycles"]
-    scan_delay = scan_parameters["scan_delay"]
+    speed = scan_parameters["scan_speed"]
+    cycles = scan_parameters["scan_cycles"]
+    delay = scan_parameters["scan_delay"]
 
-    # Select the MPM module, channel and dynamic range.
+    # --- MPM configuration ---
     selected_channels = select_mpm_channels(mpm)
     selected_ranges = select_dynamic_ranges(mpm)
 
-    # Create an instance and initialize the STS process class.
+    # --- Initialize STS Process ---
     ilsts = StsProcess(tsl, mpm, daq)
-
-    # Set the parameters.
-    ilsts.set_parameters(start_wavelength, stop_wavelength, scan_step, power, scan_speed,
+    ilsts.set_parameters(start_wl, stop_wl, step, power, speed,
                          selected_channels, selected_ranges)
 
+    # --- MPM 215 Special Handling ---
     if mpm.mpm_215_selection_check(selected_channels):
         tsl_power_check(tsl)
         ilsts.selected_ranges = [2]
 
-    # Load reference scan data if available
-    reference_scan_data = (
-        data_utils.import_reference_scan_data() if is_scan_parameters_loaded else None
+    # --- Reference Scan Handling ---
+    reference_data = (
+        data_utils.import_reference_scan_data()
+        if parameters_loaded else None
     )
 
-    # Check if reference scan data exists or not
-    if not reference_scan_data:
+    if not reference_data:
         input("\nConnect for Reference measurement and press ENTER")
-        print("Reference process...")
+        print("▶ Reference process started...")
         ilsts.reference_scan()
     else:
-        print("Loading reference data...")
-        ilsts.load_reference_scan_data(reference_scan_data)
+        print("✅ Reference data loaded.")
+        ilsts.load_reference_scan_data(reference_data)
 
-    # Measurement scan operation.
-    print("\nMeasurement process...")
-    user_response = "y"
-    while user_response in "yY":
+    # --- DUT Measurement Scans ---
+    print("\n▶ Starting measurement process...")
+    redo_scan = "y"
+
+    while redo_scan.lower() == "y":
         input("Connect the DUT and press ENTER")
-        for i in range(scan_cycles):
-            scan_index = i + 1
-            print("\nScan {} of {}...".format(str(scan_index), scan_cycles))
 
+        for i in range(cycles):
+            print(f"\n🟢 Measurement Scan {i + 1} of {cycles}...")
             ilsts.measurement_scan()
 
-            user_map_display = input("\nDo you want to view the graph ?? (y/n): ")
-            if user_map_display == "y":
-                plot_utils.plot_wavelength_dependent_loss(ilsts.wavelength_table, ilsts.il)
+            # Optionally show graph
+            if input("\nView the graph? (y/n): ").lower() == "y":
+                plot_utils.plot_wavelength_dependent_loss(
+                    ilsts.wavelength_table, ilsts.il
+                )
 
-            time.sleep(scan_delay)
+            time.sleep(delay)
 
-            if scan_cycles > 1 and scan_index < scan_cycles:
-                input(f"\nPress ENTER to continue to Scan {scan_index + 1}...")
+            if cycles > 1 and i < cycles - 1:
+                input(f"\nPress ENTER to continue to Scan {i + 2}...")
 
         ilsts.get_dut_data()
+        redo_scan = input("\nRedo Scan? (y/n): ")
 
-        user_response = input("\nRedo Scan ? (y/n): ")
-
-    # Disconnect the instruments.
-    ilsts.disconnect_instruments()
-
-    # Save the scan parameters.
     data_utils.export_scan_parameters(scan_parameters)
-
-    # Save the reference scan data.
-    data_utils.export_reference_data(ilsts)
-
-    # Save the scan data.
     save_scan_data(ilsts)
 
+    print("\nWavelength-dependent loss measurement completed.")
 
-def power_scan(tsl: TslInstrument, mpm: MpmInstrument):
-    """ Performs a power scan measurement. """
-    # MPM setting
-    mpm_mod, mpm_chan = input('\nSelect Powermeter Module and Channel (Ex: Module,Channel => 0,1): ').split(',')
-    avg_time = float(input('Set Averaging time for the powermeter (0.01~10000.00) [msec]: '))
 
-    mpm.write('AUTO')  # Set automatic gain for the powermeter
-    mpm.write(f'AVG {avg_time}')
+def power_scan(tsl: "TslInstrument", mpm: "MpmInstrument") -> None:
+    """
+    Perform a power scan measurement across a power range using TSL and MPM.
 
-    # TSL setting
-    set_wl = float(input('Set characterization wavelength [nm]: '))
-    start_pow = float(input('Input start power [dBm]: '))
-    stop_pow = float(input('Input stop power [dBm]: '))
-    step_pow = float(input('Input power step [dB]: '))
+    Steps:
+      1. Configure MPM (gain, averaging)
+      2. Sweep TSL output power
+      3. Record corresponding MPM readings
+      4. Plot and save results
+    """
+    # --- User input ---
+    try:
+        mpm_mod, mpm_chan = map(int, input("\nSelect Powermeter Module and Channel (Ex: 0,1): ").split(','))
+        avg_time = float(input("Set Averaging time for the powermeter (0.01~10000.00) [msec]: "))
 
+        set_wl = float(input("Set characterization wavelength [nm]: "))
+        start_pow = float(input("Input start power [dBm]: "))
+        stop_pow = float(input("Input stop power [dBm]: "))
+        step_pow = float(input("Input power step [dB]: "))
+    except ValueError:
+        print("⚠ Invalid input format. Please enter numeric values correctly.")
+        return
+
+    # --- MPM setup ---
+    mpm.write("AUTO")               # Automatic gain
+    mpm.write(f"AVG {avg_time}")    # Averaging time in msec
+
+    # --- TSL setup ---
     tsl.set_wavelength(set_wl)
-    tsl.write(f'POW {start_pow}')
+    tsl.write(f"POW {start_pow}")
 
     if start_pow > stop_pow:
-        step_pow = -step_pow
+        step_pow = -abs(step_pow)
+    else:
+        step_pow = abs(step_pow)
 
-    # The dwelling time is set 10 times longer than the averaging time of the powermeter
-    dwell_time = DWELL_TIME_CONSTANT * avg_time / MILLISECONDS_TO_SECONDS_CONSTANT
+    dwell_time = (DWELL_TIME_FACTOR * avg_time) / MS_TO_SEC
 
-    power_reading, power_array = [], []
-    actual_pow = start_pow
-    while actual_pow != stop_pow + step_pow:
-        # print(actual_pow)
-        power_array.append(actual_pow)
+    # --- Measurement loop ---
+    power_values: List[float] = []
+    readings: List[float] = []
 
-        # Read power from the MPM
-        raw_power = mpm.query(f'READ? {mpm_mod}')[1].split(',')
-        power_reading.append(float(raw_power[int(mpm_chan) - 1]))
+    current_power = start_pow
+    while True:
+        power_values.append(current_power)
+
+        # Query MPM reading
+        response = mpm.query(f"READ? {mpm_mod}")
+        try:
+            data = response[1].split(',')
+            reading = float(data[mpm_chan - 1])
+        except (IndexError, ValueError):
+            print(f"⚠ Invalid MPM response for channel {mpm_chan}: {response}")
+            reading = float('nan')
+
+        readings.append(reading)
         time.sleep(dwell_time)
-        actual_pow = round(actual_pow + step_pow, 2)
-        tsl.write(f'POW {actual_pow}')
 
-    # Plot the results.
-    plot_utils.plot_power_reading(power_array, power_reading)
+        # Update next power
+        current_power = round(current_power + step_pow, 2)
+        tsl.write(f"POW {current_power}")
 
-    # Save the power scan results.
-    data_utils.save_power_scan_results(power_array, power_reading)
+        # Exit loop safely using a float comparison tolerance
+        if (step_pow > 0 and current_power > stop_pow) or (step_pow < 0 and current_power < stop_pow):
+            break
+
+    # --- Plot & Save ---
+    plot_utils.plot_power_reading(power_values, readings)
+    data_utils.save_power_scan_results(power_values, readings)
+
+    print("✅ Power scan completed successfully.")
 
 
 def main() -> None:
     """
-    Main method of the project.
-    Connects to devices, sets parameters, and performs measurements.
-
-    Returns:
-        None
+    Main entry point of the program.
+    Handles device connection, measurement selection, and process execution.
     """
-    tsl, mpm, daq = connection()
+    print("=== Instrument Link & Measurement System ===")
 
-    break_script = 'Y'
-    while break_script in 'Yy':
-        choice = ''
-        while choice not in ['1', '2']:
-            choice = input("\nMeasurement Options:"
-                           "\n1. Wavelength Dependent Loss (IL operation)"
-                           "\n2. Power scan"
-                           "\nSelect measurement type: ")
-        if choice == '1':
-            wavelength_dependent_loss(tsl, mpm, daq)
-        else:
-            power_scan(tsl, mpm)
+    try:
+        tsl, mpm, daq = connection()
+    except Exception as e:
+        print(f"\n❌ Connection failed: {e}")
+        return
 
-        break_script = input('\nDo you want to continue? (Y/n): ')
+    while True:
+        # --- Measurement selection ---
+        print("\nMeasurement Options:")
+        print("1. Wavelength Dependent Loss (IL operation)")
+        print("2. Power Scan")
 
-    print("\nClosing program.")
+        choice = input("Select measurement type [1/2]: ").strip()
+        if choice not in ('1', '2'):
+            print("⚠ Invalid selection. Please enter '1' or '2'.")
+            continue
+
+        # --- Execute selected measurement ---
+        try:
+            if choice == '1':
+                wavelength_dependent_loss(tsl, mpm, daq)
+            else:
+                power_scan(tsl, mpm)
+        except KeyboardInterrupt:
+            print("\n⚠ Measurement aborted by user.")
+        except Exception as e:
+            print(f"\n❌ Error during measurement: {e}")
+
+        # --- Continue or exit ---
+        again = input("\nDo you want to perform another measurement? (Y/n): ").strip().lower()
+        if again not in ('y', 'yes', ''):
+            break
+
+    print("\nProgram completed. Closing instruments...")
+
+    try:
+        tsl.disconnect()
+        mpm.disconnect()
+        if daq:
+            daq.disconnect()
+    except Exception as ex:
+        print(f"⚠ Warning: Failed to disconnect one or more instruments safely. {ex}")
+    else:
+        print("All instruments disconnected successfully.")
 
 
 if __name__ == "__main__":
