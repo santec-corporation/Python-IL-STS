@@ -57,7 +57,7 @@ class MpmInstrument(MpmData, BaseInstrument):
         self.logger = get_logger(__class__.__name__)
         self._instrument = MPM()
 
-    def get_modules(self) -> list:
+    def get_all_modules(self) -> list:
         """
         Detects all the modules that are mounted on the MPM (looping on the five possible slots).
         If the detected module is an MPM-212, then the possible optical channels are numbered 1 and 2
@@ -86,6 +86,15 @@ class MpmInstrument(MpmData, BaseInstrument):
             raise Exception("No modules were detected.")
         self.logger.info(f"Detected MPM modules: {self.modules}")
         return self.modules
+
+    def get_available_modules(self):
+        available_modules = []
+        modules = self.get_all_modules()
+        for module in modules:
+            if not module.module_type:
+                continue
+            available_modules.append(module)
+        return available_modules
 
     def mpm_215_selection_check(self, selected_channels) -> bool:
         """ Checks if an MPM-215 module is present and returns a boolean. """
@@ -249,7 +258,7 @@ class MpmInstrument(MpmData, BaseInstrument):
 
     def get_read_power_channel(self, slot_number: int, channel_number: int) -> float:
         """ Gets the read power of a channel."""
-        self.logger.info("MPM Get_READ_Power_Channel.")
+        self.logger.info(f"MPM Get_READ_Power_Channel. Slot number: {slot_number}. Channel number: {channel_number}")
         error_code, power = self._instrument.Get_READ_Power_Channel(slot_number, channel_number, 0)
 
         if error_code != 0:
