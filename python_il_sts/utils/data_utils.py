@@ -26,7 +26,7 @@ REFERENCE_SCAN_DATA = os.path.join(LOG_DIR, "reference_scan_data.dat")
 
 # Scan data save file names.
 FILE_REFERENCE_DATA_RESULTS = os.path.join(LOG_DIR, f"Reference_Data_{formatted_datetime}.csv")
-FILE_RAW_DATA_RESULTS = os.path.join(LOG_DIR, f"Raw_Data_{formatted_datetime}.csv")
+FILE_MEASUREMENT_DATA_RESULTS = os.path.join(LOG_DIR, f"Measurement_Data_{formatted_datetime}.csv")
 FILE_IL_DATA_RESULTS = os.path.join(LOG_DIR, f"IL_Data_{formatted_datetime}.csv")
 FILE_POWER_SCAN_RESULTS = os.path.join(LOG_DIR, f"Power_Scan_Results_{formatted_datetime}.csv")
 
@@ -174,15 +174,15 @@ def save_reference_result_data(ilsts: StsProcess):
     print("Saving Reference data to the csv file " + FILE_REFERENCE_DATA_RESULTS + "...")
 
     # Create a CSV file that has columns similar to...
-    # Wavelength Slot1Ch1_TSLPower Slot1Ch1_MPMPower Slot1Ch2_TSLPower Slot1Ch2_MPMPower
+    # Wavelength Slot1Ch1_PowerMonitor Slot1Ch1_MPMPower Slot1Ch2_PowerMonitor Slot1Ch2_MPMPower
 
     ref_data_array = ilsts.ref_data_array
 
     # Header wavelength is static. There could be any number of slots and channels.
     header = ["Wavelength(nm)"]
     for item in ref_data_array:
-        header.append("Slot{}Ch{}_TSLPower".format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"])))
         header.append("Slot{}Ch{}_MPMPower".format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"])))
+        header.append("Slot{}Ch{}_PowerMonitor".format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"])))
 
     all_rows = []  # our row array will contain one array for each line.
 
@@ -195,8 +195,8 @@ def save_reference_result_data(ilsts: StsProcess):
     for this_wavelength in wavelength_table:
         this_row_array = [this_wavelength]  # wavelength
         for this_refdata in ref_data_array:
-            this_row_array.append(str(this_refdata["rescaled_monitor"][i]))  # TSL power
             this_row_array.append(str(this_refdata["rescaled_reference_power"][i]))  # MPM power
+            this_row_array.append(str(this_refdata["rescaled_monitor"][i]))  # Power monitor data
 
         all_rows.append(this_row_array)
         i += 1
@@ -209,22 +209,24 @@ def save_reference_result_data(ilsts: StsProcess):
         writer.writerows(all_rows)
 
 
-def save_dut_result_data(ilsts: StsProcess):
+def save_measurement_result_data(ilsts: StsProcess):
     """ Save dut data to CSV for human consumption. """
-    check_and_rename_old_file(FILE_RAW_DATA_RESULTS)
+    check_and_rename_old_file(FILE_MEASUREMENT_DATA_RESULTS)
 
-    print("Saving Raw data to the csv file " + FILE_RAW_DATA_RESULTS + "...")
+    print("Saving Raw data to the csv file " + FILE_MEASUREMENT_DATA_RESULTS + "...")
 
     # Create a CSV file that has columns similar to...
-    # Wavelength Slot1Ch1_TSLPower Slot1Ch1_MPMPower Slot1Ch2_TSLPower Slot1Ch2_MPMPower
+    # Wavelength Slot1Ch1_PowerMonitor Slot1Ch1_MPMPower Slot1Ch2_PowerMonitor Slot1Ch2_MPMPower
 
     dut_data_array = ilsts.dut_data_array
 
     # Header wavelength is static. There could be any number of slots and channels.
     header = ["Wavelength(nm)"]
     for item in dut_data_array:
-        header.append("Slot{}Ch{}R{}_TSLPower".format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"]), str(item["RangeNumber"])))
-        header.append("Slot{}Ch{}R{}_MPMPower".format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"]), str(item["RangeNumber"])))
+        header.append("Slot{}Ch{}R{}_MPMPower"
+                      .format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"]), str(item["RangeNumber"])))
+        header.append("Slot{}Ch{}R{}_PowerMonitor"
+                      .format(str(item["SlotNumber"] + 1), str(item["ChannelNumber"]), str(item["RangeNumber"])))
 
     all_rows = []  # our row array will contain one array for each line.
 
@@ -237,13 +239,13 @@ def save_dut_result_data(ilsts: StsProcess):
     for this_wavelength in wavelength_table:
         this_row_array = [this_wavelength]  # wavelength
         for dut_data in dut_data_array:
-            this_row_array.append(str(dut_data["rescaled_dut_monitor"][i]))  # TSL DUT power
-            this_row_array.append(str(dut_data["rescaled_dut_power"][i]))  # MPM DUT power
+            this_row_array.append(str(dut_data["rescaled_dut_power"][i]))  # MPM power data
+            this_row_array.append(str(dut_data["rescaled_dut_monitor"][i]))  # Power monitor data
 
         all_rows.append(this_row_array)
         i += 1
 
-    with open(FILE_RAW_DATA_RESULTS, 'w', encoding='UTF8', newline='') as f:
+    with open(FILE_MEASUREMENT_DATA_RESULTS, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(all_rows)
