@@ -43,7 +43,7 @@ def set_odd_channels(modules: List[Any]) -> List[List[int]]:
 
 def set_special_channels(modules: List[Any]) -> List[List[int]]:
     """Manually select specific module/channel pairs."""
-    selection = input("Input (module,channel) pairs [ex: (1,1); (2,1)]: ")
+    selection = input("Input (module number, channel number) pairs [ex: (1,1); (2,1)]: ")
     tokens = re.findall(r"\d+", selection)
     if len(tokens) % 2 != 0:
         print("⚠ Invalid input — must have module/channel pairs.")
@@ -52,18 +52,38 @@ def set_special_channels(modules: List[Any]) -> List[List[int]]:
     return [[int(tokens[i]) - 1, int(tokens[i + 1])] for i in range(0, len(tokens), 2)]
 
 
-def select_mpm_channels(mpm) -> List[List[int]]:
+def select_mpm_channels(mpm, use_mpm_220_ref: bool, mpm_220_ref_module_info) -> List[List[int]]:
     """
     Interactively select MPM channels to measure.
     Returns a list of [module_number, channel_number] pairs.
     """
-    modules = mpm.get_modules()
+    available_modules = mpm.get_available_modules()
     print("\nAvailable modules/channels:")
-    for module in modules:
-        if not module.module_type:
-            continue
-        print(f"Module {module.module_number}: {module.module_type} - Channels: {module.channels}")
+    for module in available_modules:
+        # Example: Module 1: MPM-211 - Channels: [1, 2, 3, 4]
+        print(f"Module {module.module_number + 1}: {module.module_type} - Channels: {module.channels}")
 
+    # Set MPM-220 channel for monitor data measurement.
+    if use_mpm_220_ref:
+        print("\nPlease select reference channel for the MPM-220 instrument.")
+        selection = input("Input (module number, channel number) pair. Ex: (1,1): ")
+        tokens = re.findall(r"\d+", selection)
+
+        if len(tokens) != 2:
+            print("⚠ Invalid input — must be a module/channel pair. Using default (0,1).")
+            mpm_220_ref_module_info = [0, 1]  # default values (0-indexed)
+        else:
+            module_num, channel_num = map(int, tokens)
+            mpm_220_ref_module_info[:] = [module_num - 1, channel_num]
+
+        ref_module_num, ref_channel_num = mpm_220_ref_module_info[0], mpm_220_ref_module_info[1]
+
+        for module in available_modules:
+            if module.module_number == ref_module_num:
+                if str(ref_channel_num) in module.channels:
+                    module.channels.remove(ref_channel_num)
+
+    # Select MPM channels for measurement.
     choices = {
         '1': set_all_channels,
         '2': set_even_channels,
@@ -71,7 +91,7 @@ def select_mpm_channels(mpm) -> List[List[int]]:
         '4': set_special_channels,
     }
 
-    print("""Channels measurement options:
+    print("""\nMeasurement channels selection options:
               1. All channels
               2. Even channels
               3. Odd channels
@@ -80,7 +100,7 @@ def select_mpm_channels(mpm) -> List[List[int]]:
     while True:
         user_choice = input("Select channels to be measured: ").strip()
         if user_choice in choices:
-            return choices[user_choice](modules)
+            return choices[user_choice](available_modules)
         print("⚠ Invalid selection, please enter 1–4.")
 
 
@@ -104,7 +124,7 @@ def save_scan_data(ilsts: StsProcess) -> None:
     data_utils.save_reference_result_data(ilsts)
 
     # Save the measurement scan data.
-    data_utils.save_dut_result_data(ilsts)
+    data_utils.save_measurement_result_data(ilsts)
 
     # Save the IL data.
     data_utils.save_il_data(ilsts)
@@ -142,10 +162,12 @@ def connection() -> Tuple["TslInstrument", "MpmInstrument", Optional["DaqInstrum
 
     # Optional DAQ connection
     daq_instrument = None
-    if "210" in mpm_resource and daq_resource:
+    if "210" in mpm_resource:
+        if not daq_resource:
+            raise RuntimeError("❌ DAQ device not detected. Please connect the DAQ.")
         daq_instrument = connection_manager.connect(daq_resource)
 
-    print("✅ Instruments successfully connected.")
+    print("Instruments successfully connected.")
     return tsl_instrument, mpm_instrument, daq_instrument
 
 
@@ -160,7 +182,7 @@ def tsl_power_check(tsl: "TslInstrument") -> None:
 
         if power <= 5.0:
             tsl.set_power(power)
-            print(f"✅ Power set to {power:.2f} dBm.")
+            print(f"Power set to {power:.2f} dBm.")
             break
 
         print("\n⚠ Power should be ≤ 5 dBm. Please try again.")
@@ -184,6 +206,18 @@ def wavelength_dependent_loss(
     # --- Identify TSL type ---
     is_tsl_570 = not tsl.get_tsl_type_flag()
 
+    # --- Identify MPM type and select the operation mode ---
+    if "220" in mpm.product_name:
+        print("\nMPM-220 instrument detected. Please select the operation mode.")
+        choice = input("Select measurement type [1: Standard / 2: High-spec]: ").strip()
+
+        if choice not in ('1', '2'):
+            raise ValueError("⚠ Invalid selection. Please enter 1 or 2.")
+
+        use_high_spec_mode = (choice == '2')
+    else:
+        use_high_spec_mode = False
+
     # --- Load scan parameters ---
     scan_parameters = {}
     parameters_loaded = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
@@ -196,12 +230,28 @@ def wavelength_dependent_loss(
     cycles = scan_parameters["scan_cycles"]
     delay = scan_parameters["scan_delay"]
 
-    # --- MPM configuration ---
-    selected_channels = select_mpm_channels(mpm)
-    selected_ranges = select_dynamic_ranges(mpm)
-
     # --- Initialize STS Process ---
-    ilsts = StsProcess(tsl, mpm, daq)
+    ilsts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
+
+    # --- Reference Scan Handling ---
+    reference_data = (
+        data_utils.import_reference_scan_data()
+        if parameters_loaded else None
+    )
+
+    selected_channels = []
+    selected_ranges = []
+    if not reference_data:
+        # --- MPM configuration ---
+        mpm_220_ref_module_info = [-1, -1]
+        selected_channels = select_mpm_channels(mpm, ilsts.use_ref_mpm_220, mpm_220_ref_module_info)
+        ilsts.mpm_220_high_spec_module_info = (mpm_220_ref_module_info[0], mpm_220_ref_module_info[1])
+        selected_ranges = select_dynamic_ranges(mpm)
+    else:
+        print("\nReference data loaded.")
+        ilsts.load_reference_scan_data(reference_data)
+
+    # --- Set STS Process parameters ---
     ilsts.set_parameters(start_wl, stop_wl, step, power, speed,
                          selected_channels, selected_ranges)
 
@@ -210,26 +260,18 @@ def wavelength_dependent_loss(
         tsl_power_check(tsl)
         ilsts.selected_ranges = [2]
 
-    # --- Reference Scan Handling ---
-    reference_data = (
-        data_utils.import_reference_scan_data()
-        if parameters_loaded else None
-    )
-
+    # --- Reference Scan ---
     if not reference_data:
-        input("\nConnect for Reference measurement and press ENTER")
-        print("▶ Reference process started...")
+        print("\nReference process...")
+        input("\nPress ENTER to start the reference process ")
         ilsts.reference_scan()
-    else:
-        print("✅ Reference data loaded.")
-        ilsts.load_reference_scan_data(reference_data)
 
     # --- DUT Measurement Scans ---
-    print("\n▶ Starting measurement process...")
+    print("\nMeasurement process...")
     redo_scan = "y"
 
     while redo_scan.lower() == "y":
-        input("Connect the DUT and press ENTER")
+        input("Connect the DUT and Press ENTER to start the measurement process ")
 
         for i in range(cycles):
             print(f"\n🟢 Measurement Scan {i + 1} of {cycles}...")
@@ -325,7 +367,7 @@ def power_scan(tsl: "TslInstrument", mpm: "MpmInstrument") -> None:
     plot_utils.plot_power_reading(power_values, readings)
     data_utils.save_power_scan_results(power_values, readings)
 
-    print("✅ Power scan completed successfully.")
+    print("Power scan completed successfully.")
 
 
 def main() -> None:
@@ -364,7 +406,7 @@ def main() -> None:
             print(f"\n❌ Error during measurement: {e}")
 
         # --- Continue or exit ---
-        again = input("\nDo you want to perform another measurement? (Y/n): ").strip().lower()
+        again = input("\nWould you like to continue? (Y/n): ").strip().lower()
         if again not in ('y', 'yes', ''):
             break
 

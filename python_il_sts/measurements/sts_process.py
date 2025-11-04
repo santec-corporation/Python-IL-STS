@@ -48,6 +48,12 @@ class STSData:
     all_modules = []
     selected_channels = []
 
+    mpm_220_high_spec_module_info: tuple[int, int]
+
+    use_mpm_216: bool = False
+    use_ref_mpm_220: bool = False
+    use_power_monitor_logg: bool = False
+
 
 class StsProcess(STSData):
     """
@@ -57,11 +63,22 @@ class StsProcess(STSData):
     def __init__(self,
                  tsl: TslInstrument,
                  mpm: MpmInstrument,
-                 daq: DaqInstrument | None = None):
+                 daq: DaqInstrument | None = None,
+                 high_spec_mode: bool = False):
         self._tsl = tsl
         self._mpm = mpm
         self._daq = daq
         self._ilsts = PDLSTS()
+
+        if "220" in self._mpm.product_name:
+            if high_spec_mode:
+                self.use_ref_mpm_220 = True
+            else:
+                self.use_power_monitor_logg = True
+        elif "210" in self._mpm.product_name:
+            if not self._daq:
+                raise RuntimeError("❌ DAQ device not set. Please initialize with the DAQ instance.")
+
         self.logger = get_logger(__class__.__name__)
         self.logger.info(f"TslInstrument: {tsl}, MpmInstrument: {mpm}, DaqDevice: {daq}")
 
@@ -190,7 +207,7 @@ class StsProcess(STSData):
         """
         self.logger.info("STS scan proces")
 
-        print(f"\nScanning{scan_index} Started....")
+        print(f"\n{scan_index}Scanning Process....")
 
         # Start the TSL scan proces
         self._tsl.start_scan()
@@ -246,6 +263,15 @@ class StsProcess(STSData):
 
         return None
 
+    def _get_mpm_220_data(self):
+        # Get the trigger data from the MPM slot
+        trigger = self._mpm.get_trigger_data(self.mpm_220_high_spec_module_info[0])
+
+        # Get the monitor data from the MPM ref channel
+        monitor = self._mpm.get_each_channel_log_data(self.mpm_220_high_spec_module_info[0],
+                                                      self.mpm_220_high_spec_module_info[1])
+        return trigger, monitor
+
     def _get_reference_data(self, data_struct_item: STSDataStruct) -> None:
         """
         Get the reference data by using the parameter data structure, as well as the trigger points, and monitor data.
@@ -278,9 +304,13 @@ class StsProcess(STSData):
             raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         # Get trigger and monitor data
+        trigger = []
+        monitor = []
         if self._daq:
             trigger, monitor = self._daq.get_sampling_raw_data()
-        else:
+        elif self.use_ref_mpm_220:
+            trigger, monitor = self._get_mpm_220_data()
+        elif self.use_power_monitor_logg:
             # Get the trigger data from the MPM
             trigger = self._mpm.get_trigger_data(data_struct_item.SlotNumber)
 
@@ -388,13 +418,17 @@ class StsProcess(STSData):
                 raise STSProcessError(str(error_code) + ": " + sts_process_error_strings(error_code))
 
         # Get trigger and monitor data
+        trigger = []
+        monitor = []
         if self._daq:
             trigger, monitor = self._daq.get_sampling_raw_data()
-        else:
-            # Get the trigger data from the MPM
+        elif self.use_ref_mpm_220:
+            trigger, monitor = self._get_mpm_220_data()
+        elif self.use_power_monitor_logg:
+            # Get the trigger data from the MPM slot number 0.
             trigger = self._mpm.get_trigger_data(0)
 
-            # Get the monitor data from the TSL
+            # Get the monitor data from the TSL.
             monitor = self._tsl.get_power_logging_data(self.scan_speed, self.tsl_actual_step)
 
         trigger_data = array("d", trigger)  # List to Array
@@ -564,7 +598,8 @@ class StsProcess(STSData):
         self.logger.info("Reference operation...")
 
         for i in self.ref_data:
-            input("\nConnect Slot {} Channel {}, then press ENTER".format(i.SlotNumber + 1, i.ChannelNumber))
+            input("\nPerforming reference scan on slot {} channel {}...Press ENTER to start"
+                  .format(i.SlotNumber + 1, i.ChannelNumber))
             self.logger.info("STS reference of Slot{} Ch{}".format(i.SlotNumber + 1, i.ChannelNumber))
 
             # Set the MPM optimal dynamic range.
@@ -589,7 +624,7 @@ class StsProcess(STSData):
             self._mpm.set_range(mpm_range)
 
             # Base scan process
-            self._base_scan_process(f" Range {mpm_range}")
+            self._base_scan_process(f"Range {mpm_range} ")
 
             # Get the measurement scan data
             _ = self._get_measurement_data(scan_count)
