@@ -2,6 +2,9 @@
 MPM Instrument Class.
 """
 
+from typing import List
+from dataclasses import dataclass
+
 from ..drivers.santec_wrapper import MPM
 from .base_instrument import BaseInstrument
 
@@ -12,6 +15,7 @@ from ..utils.error_handling import InstrumentError, instrument_error_strings
 from ..logger import get_logger
 
 
+@dataclass
 class ModuleData:
     """
     A class to represent the module information of an MPM.
@@ -23,14 +27,8 @@ class ModuleData:
     """
     module_number: int
     module_type: str | None
-    channels: list = []
-
-    def __init__(self, module_number: int,
-                 module_type: str | None,
-                 channels: list):
-        self.module_number = module_number
-        self.module_type = module_type
-        self.channels = channels
+    channels: list
+    ranges: list
 
 
 class MpmData:
@@ -72,28 +70,34 @@ class MpmInstrument(MpmData, BaseInstrument):
         """
         self.logger.info("Get the MPM modules")
 
-        for slot_count in range(5):
-            module_info = self._instrument.Information.ModuleType[slot_count]
-            if self._instrument.Information.ModuleEnable[slot_count] is True:
-                if self.check_mpm_212(slot_count):
-                    self.modules.append(ModuleData(slot_count, "MPM-212", [1, 2]))
+        self.modules.clear()
+        for slot_no in range(5):
+            module_name = self._instrument.Information.ModuleType[slot_no]
+            range_data = self.get_range(slot_no)
+            channels = []
+            if self._instrument.Information.ModuleEnable[slot_no]:
+                if self.check_mpm_212(slot_no):
+                    channels = [1, 2]
                 else:
-                    self.modules.append(ModuleData(slot_count, module_info, [1, 2, 3, 4]))
+                    channels = [1, 2, 3, 4]
             else:
-                self.modules.append(ModuleData(slot_count, None, []))
+                module_name = None
+
+            self.modules.append(ModuleData(slot_no, module_name, channels, range_data))
+
         if len(self.modules) == 0:
             self.logger.warning("No MPM modules were detected.")
             raise Exception("No modules were detected.")
         self.logger.info(f"Detected MPM modules: {self.modules}")
+
         return self.modules
 
-    def get_available_modules(self):
+    def get_available_modules(self) -> List[ModuleData]:
         available_modules = []
         modules = self.get_all_modules()
         for module in modules:
-            if not module.module_type:
-                continue
-            available_modules.append(module)
+            if module.module_type:
+                available_modules.append(module)
         return available_modules
 
     def mpm_215_selection_check(self, selected_channels) -> bool:
@@ -138,34 +142,19 @@ class MpmInstrument(MpmData, BaseInstrument):
         self.logger.info(f"MPM module type check: flag_215={flag_215}, flag_213={flag_213}")
         return flag_215, flag_213
 
-    def check_mpm_215(self, slot_num: int) -> bool:
+    def check_mpm_211(self, slot_number: int) -> bool:
         """
-        Checks if the mounted module at the given slot number is an MPM-215 module.
-
-        Parameters:
-            slot_num (int): The module number (0~4) of the MPM.
-
-        Returns:
-            bool: True if an MPM-215 is detected.
-        """
-        self.logger.info("MPM check if module 215")
-        check = bool(self._instrument.Information.ModuleType[slot_num] == "MPM-215")
-        self.logger.info(f"MPM module 215: {check}")
-        return check
-
-    def check_mpm_213(self, slot_number: int) -> bool:
-        """
-        Checks if the mounted module at the given slot number is an MPM-213 module.
+        Checks if the mounted module at the given slot number is an MPM-211 module.
 
         Parameters:
             slot_number (int): The module number (0~4) of the MPM.
 
         Returns:
-            bool: True if an MPM-213 is detected.
+            bool: True if an MPM-211 is detected.
         """
-        self.logger.info("MPM check if module 213")
-        check = bool(self._instrument.Information.ModuleType[slot_number] == "MPM-213")
-        self.logger.info(f"MPM module 213: {check}")
+        self.logger.info("MPM check if module 211")
+        check = bool(self._instrument.Information.ModuleType[slot_number] == "MPM-211")
+        self.logger.info(f"MPM module 211: {check}")
         return check
 
     def check_mpm_212(self, slot_number: int) -> bool:
@@ -183,7 +172,37 @@ class MpmInstrument(MpmData, BaseInstrument):
         self.logger.info(f"MPM module 212: {check}")
         return check
 
-    def get_range(self):
+    def check_mpm_213(self, slot_number: int) -> bool:
+        """
+        Checks if the mounted module at the given slot number is an MPM-213 module.
+
+        Parameters:
+            slot_number (int): The module number (0~4) of the MPM.
+
+        Returns:
+            bool: True if an MPM-213 is detected.
+        """
+        self.logger.info("MPM check if module 213")
+        check = bool(self._instrument.Information.ModuleType[slot_number] == "MPM-213")
+        self.logger.info(f"MPM module 213: {check}")
+        return check
+
+    def check_mpm_215(self, slot_num: int) -> bool:
+        """
+        Checks if the mounted module at the given slot number is an MPM-215 module.
+
+        Parameters:
+            slot_num (int): The module number (0~4) of the MPM.
+
+        Returns:
+            bool: True if an MPM-215 is detected.
+        """
+        self.logger.info("MPM check if module 215")
+        check = bool(self._instrument.Information.ModuleType[slot_num] == "MPM-215")
+        self.logger.info(f"MPM module 215: {check}")
+        return check
+
+    def get_range(self, slot_no):
         """
         Gets the measurement dynamic dynamic_range of the MPM module.
         Depending on the module type, the dynamic dynamic_range varies.
@@ -196,13 +215,14 @@ class MpmInstrument(MpmData, BaseInstrument):
                     if other modules: [1,2,3,4,5]
         """
         self.logger.info("MPM get dynamic ranges of modules")
-        if self.check_mpm_215:
+        if self.check_mpm_215(slot_no):
             available_ranges = [1]
-        elif self.check_mpm_213:
-            # 213 have 4 ranges
+        elif self.check_mpm_213(slot_no):
             available_ranges = [1, 2, 3, 4]
-        else:
+        elif self.check_mpm_211(slot_no):
             available_ranges = [1, 2, 3, 4, 5]
+        else:
+            available_ranges = []
         self.logger.info(f"MPM dynamic_range data: {available_ranges}")
         return available_ranges
 
@@ -397,6 +417,55 @@ class MpmInstrument(MpmData, BaseInstrument):
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
         self.logger.info(f"MPM trigger data length: {len(trigger)}")
         return trigger
+
+    def validate_selected_channels_ranges(self, selected_channels, selected_ranges,
+                                          mpm_220_ref_module_info = None):
+        available_modules = self.get_available_modules()
+        available_channels = []
+        available_ranges = set()
+
+        valid = True
+        errors = []
+
+        for module in available_modules:
+            for channel in module.channels:
+                available_channels.append([module.module_number, channel])
+            for dynamic_range in module.ranges:
+                available_ranges.add(dynamic_range)
+
+        if not available_channels:
+            return valid, ["No MPM channels available."]
+
+        if not available_ranges:
+            return valid, ["No dynamic ranges available."]
+
+        if mpm_220_ref_module_info:
+            if mpm_220_ref_module_info in available_channels:
+                available_channels.remove(mpm_220_ref_module_info)
+
+        if mpm_220_ref_module_info in selected_channels:
+            errors.append(f"MPM-220 reference channel: {mpm_220_ref_module_info[0] + 1, mpm_220_ref_module_info[1]}"
+                          f" cannot be the same as measurement channel")
+            valid = False
+
+        if not valid:
+            error_message = "\n".join(errors) if errors else None
+            return valid, error_message
+
+        for selected_channel in selected_channels:
+            if selected_channel not in available_channels:
+                errors.append(f"Channel: {selected_channel[0] + 1, selected_channel[1]} is NOT available")
+                valid = False
+                continue
+
+        for selected_range in selected_ranges:
+            if selected_range not in available_ranges:
+                errors.append(f"Dynamic Range: {selected_range} is NOT available")
+                valid = False
+                continue
+
+        error_message = ". ".join(errors) if errors else None
+        return valid, error_message
 
     def set_logging_parameters(self,
                                start_wavelength: float,
