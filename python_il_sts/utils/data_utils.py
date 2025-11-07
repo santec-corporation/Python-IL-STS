@@ -83,11 +83,14 @@ def get_tsl_scan_speed(step_wavelength) -> int:
     Displays the TSL speed table
     and gets the scan speed from the user.
 
+    Step wavelength in pm.
+
     :return: int | TSL scan speed
     """
-    speed_table = {"1": 1, "2": 2, "3": 5, "4": 10}
+    speed_table = {}
 
-    thresholds = [(1, "5", 20), (2.5, "6", 50), (5, "7", 100), (100, "8", 200)]
+    thresholds = [(0.2, "1", 1), (0.2, "2", 2), (0.5, "3", 5), (1, "4", 10),
+                  (1, "5", 20), (2.5, "6", 50), (5, "7", 100), (100, "8", 200)]
 
     for limit, key, value in thresholds:
         if step_wavelength >= limit:
@@ -107,7 +110,7 @@ def get_scan_parameters(scan_parameters: dict, is_tsl_570 = True):
     if not load_scan_parameters:
         scan_parameters["start_wavelength"] = float(input("\nInput Start Wavelength (nm): "))
         scan_parameters["stop_wavelength"] = float(input("Input Stop Wavelength (nm): "))
-        scan_parameters["scan_step"] = float(input("Input Scan Step (pm): ")) / 1000
+        scan_parameters["scan_step"] = float(input("Input Scan Step (pm): "))
         scan_parameters["power"] = float(input("Input Output Power (dBm): "))
         scan_parameters["scan_cycles"] = int(input("Input Scan Cycles: "))
         scan_parameters["scan_delay"] = 0
