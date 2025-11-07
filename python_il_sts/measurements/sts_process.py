@@ -48,7 +48,7 @@ class STSData:
     all_modules = []
     selected_channels = []
 
-    mpm_220_high_spec_module_info: tuple[int, int]
+    mpm_220_high_spec_module_info: tuple[int, int] = None
 
     use_mpm_216: bool = False
     use_ref_mpm_220: bool = False
@@ -658,6 +658,17 @@ class StsProcess(STSData):
         self._get_il_data()
 
         self.logger.info("Measurement completed.")
+
+    def get_channel_range_selection(self):
+        channel_selection = self.selected_channels
+        dynamic_range_selection = self.selected_ranges
+        mpm_220_reference_channel = self.mpm_220_high_spec_module_info
+
+        return {
+            "channel_selection": channel_selection,
+            "dynamic_range_selection": dynamic_range_selection,
+            "mpm_220_reference_channel": mpm_220_reference_channel
+        }
 
     def disconnect_instruments(self):
         self._tsl.disconnect()

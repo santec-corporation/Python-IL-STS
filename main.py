@@ -221,7 +221,7 @@ def wavelength_dependent_loss(
 
     # --- Load scan parameters ---
     scan_parameters = {}
-    _ = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
+    parameters_loaded  = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
 
     start_wl = scan_parameters["start_wavelength"]
     stop_wl = scan_parameters["stop_wavelength"]
@@ -231,30 +231,46 @@ def wavelength_dependent_loss(
     cycles = scan_parameters["scan_cycles"]
     delay = scan_parameters["scan_delay"]
 
-    # --- Initialize STS Process ---
-    ilsts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
-
-    mpm_220_ref_module_info = [-1, -1]
+    # --- Reference Data Import Handling ---
+    reference_data = (
+        data_utils.import_reference_scan_data()
+        if parameters_loaded else None
+    )
 
     # --- MPM configuration ---
-    selected_channels = select_mpm_channels(mpm, ilsts.use_ref_mpm_220, mpm_220_ref_module_info)
-    selected_ranges = select_dynamic_ranges(mpm)
+    mpm_220_ref_module_info = [-1, -1]
+    if reference_data:
+        channel_range_selection = reference_data[0]
+        selected_channels = channel_range_selection["channel_selection"]
+        selected_dynamic_ranges = channel_range_selection["dynamic_range_selection"]
+        mpm_220_ref_module_info = channel_range_selection["mpm_220_reference_channel"]
+        reference_data = reference_data[1:]
+    else:
+        selected_channels = select_mpm_channels(mpm, use_high_spec_mode, mpm_220_ref_module_info)
+        selected_dynamic_ranges = select_dynamic_ranges(mpm)
 
     # --- MPM 215 Special Handling ---
     if mpm.mpm_215_selection_check(selected_channels):
         tsl_power_check(tsl)
-        selected_ranges = [2]
+        selected_dynamic_ranges = [2]
+
+    # --- Initialize STS Process ---
+    ilsts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
 
     # --- Set STS Process parameters ---
-    ilsts.set_scan_parameters(start_wl, stop_wl, step, power, speed,
-                              selected_channels, selected_ranges, mpm_220_ref_module_info)
+    ilsts.set_scan_parameters(start_wl, stop_wl, step, power, speed, selected_channels,
+                              selected_dynamic_ranges, mpm_220_ref_module_info)
 
-    # --- Reference Scan ---
-    print("\nReference process...")
-    input("\nPress ENTER to start the reference process ")
-    ilsts.reference_scan()
+    # --- Reference Scan Process ---
+    if reference_data:
+        ilsts.load_reference_scan_data(reference_data)
+        print("\nLoaded reference scan data.")
+    else:
+        print("\nReference process...")
+        input("\nPress ENTER to start the reference process ")
+        ilsts.reference_scan()
 
-    # --- DUT Measurement Scans ---
+    # --- Measurement Scan Process ---
     print("\nMeasurement process...")
     redo_scan = "y"
 

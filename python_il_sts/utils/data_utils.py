@@ -66,11 +66,11 @@ def import_reference_scan_data() -> dict | None:
     if ans not in "Yy":
         return None
 
-    # Get the file size.
-    int_file_size = int(os.path.getsize(REFERENCE_SCAN_DATA))
-    str_file_size = f"{int_file_size / 1000000:.2f} MB" if int_file_size > 1000000 else f"{int_file_size / 1000:.2f} KB"
+    # # Get the file size.
+    # int_file_size = int(os.path.getsize(REFERENCE_SCAN_DATA))
+    # str_file_size = f"{int_file_size / 1000000:.2f} MB" if int_file_size > 1000000 else f"{int_file_size / 1000:.2f} KB"
+    # print("Opening " + str_file_size + " file '" + REFERENCE_SCAN_DATA + "'...")
 
-    print("Opening " + str_file_size + " file '" + REFERENCE_SCAN_DATA + "'...")
     with open(REFERENCE_SCAN_DATA, 'r', encoding='utf-8') as file:
         data = file.read()
         reference_scan_data = json.loads(data)
@@ -140,8 +140,10 @@ def export_scan_parameters(scan_parameters: dict):
 
 def export_reference_data(ilsts: StsProcess):
     """ Save reference data as a data file. """
-    reference_data_array = ilsts.ref_data_array
-    data = str(reference_data_array).replace("'", '"')
+    reference_data_array = [ilsts.get_channel_range_selection()]
+    reference_data_array.extend(ilsts.ref_data_array)
+
+    data = json.dumps(reference_data_array, indent=4).replace("'", '"')
     with open(REFERENCE_SCAN_DATA, 'w', encoding='utf-8') as file:
         file.write(data)
 

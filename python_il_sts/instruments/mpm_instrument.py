@@ -31,21 +31,7 @@ class ModuleData:
     ranges: list
 
 
-class MpmData:
-    """
-    MPM data class.
-    """
-    modules: list = []
-    dynamic_ranges = [
-        '-30 ~ +10dBm',
-        '-40 ~ 0dBm',
-        '-50 ~ -10dBm',
-        '-60 ~ -20dBm',
-        '-80 ~ -30dBm'
-    ]
-
-
-class MpmInstrument(MpmData, BaseInstrument):
+class MpmInstrument(BaseInstrument):
     """
     A class to represent the data for an MPM.
     """
@@ -70,7 +56,7 @@ class MpmInstrument(MpmData, BaseInstrument):
         """
         self.logger.info("Get the MPM modules")
 
-        self.modules.clear()
+        modules = []
         for slot_no in range(5):
             module_name = self._instrument.Information.ModuleType[slot_no]
             range_data = self.get_range(slot_no)
@@ -83,14 +69,14 @@ class MpmInstrument(MpmData, BaseInstrument):
             else:
                 module_name = None
 
-            self.modules.append(ModuleData(slot_no, module_name, channels, range_data))
+            modules.append(ModuleData(slot_no, module_name, channels, range_data))
 
-        if len(self.modules) == 0:
+        if len(modules) == 0:
             self.logger.warning("No MPM modules were detected.")
             raise Exception("No modules were detected.")
-        self.logger.info(f"Detected MPM modules: {self.modules}")
+        self.logger.info(f"Detected MPM modules: {modules}")
 
-        return self.modules
+        return modules
 
     def get_available_modules(self) -> List[ModuleData]:
         available_modules = []
@@ -101,15 +87,14 @@ class MpmInstrument(MpmData, BaseInstrument):
         return available_modules
 
     def mpm_215_selection_check(self, selected_channels) -> bool:
-        """ Checks if an MPM-215 module is present and returns a boolean. """
-        modules_info = self.modules
-        use_mpm_215_flag = False
+        """Checks if an MPM-215 module is present and returns a boolean."""
+        modules = {module.module_number: module.module_type
+                   for module in self.get_available_modules()}
 
-        for selection in selected_channels:
-            module_no = int(selection[0])
-            if modules_info[module_no].module_type == 'MPM-215':
-                use_mpm_215_flag = True
-        return use_mpm_215_flag
+        return any(
+            modules.get(int(selection[0])) == "MPM-215"
+            for selection in selected_channels
+        )
 
     def check_module_type(self) -> tuple[bool, bool]:
         """
