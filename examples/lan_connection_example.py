@@ -1,5 +1,5 @@
 """
-Python IL STS - Connection example.
+Python IL STS - LAN Connection example.
 """
 
 # Import the connection manager class from python_il_sts.
@@ -7,7 +7,5 @@ from python_il_sts import ConnectionManager
 
 connect = ConnectionManager()
 
-print(connect.list_instruments())
-
-tsl = connect.connect('TSL-570_22071071_GPIB')
+tsl = connect.connect_tsl('TCPIP0::192.168.1.101::5000::SOCKET')       # TCPIP0::192.168.10.101::5000::SOCKET
 print(tsl.firmware_version)

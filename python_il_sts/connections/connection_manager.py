@@ -79,16 +79,25 @@ class ConnectionManager(GetInstruments):
                               resource_name: str,
                               terminator: Terminator):
 
-        connection_type = self._get_connection_type(resource_name)
+        resource_address = self._instruments.get(resource_name)
+
+        if not resource_address:
+            if "TCPIP" in resource_name:
+                connection_type = ConnectionType.TCPIP
+            else:
+                raise Exception("Could not fetch resource name. "
+                                "Please make the entered instrument resource name is of the correct format.")
+        else:
+            connection_type = self._get_connection_type(resource_address)
 
         if connection_type is ConnectionType.NULL:
             raise Exception("Connection type not found.")
 
         match connection_type:
             case ConnectionType.GPIB:
-                self._gpib_connection(instrument, resource_name, terminator)
+                self._gpib_connection(instrument, resource_address, terminator)
             case ConnectionType.USB:
-                self._usb_connection(instrument, resource_name, terminator)
+                self._usb_connection(instrument, resource_address, terminator)
             case ConnectionType.TCPIP:
                 self._tcpip_connection(instrument, resource_name, terminator)
             case ConnectionType.NULL:
@@ -100,13 +109,11 @@ class ConnectionManager(GetInstruments):
     def connect_tsl(self, resource_name) -> TslInstrument | None:
         terminator = Terminator.CR
         instrument = TslInstrument()
-        resource_name = self._instruments.get(resource_name)
         return self._establish_connection(instrument, resource_name, terminator)
 
     def connect_mpm(self, resource_name) -> MpmInstrument | None:
         terminator = Terminator.LF
         instrument = MpmInstrument()
-        resource_name = self._instruments.get(resource_name)
         return self._establish_connection(instrument, resource_name, terminator)
 
     def _connect_daq(self, device_name: str) -> DaqInstrument | None:
@@ -190,7 +197,7 @@ class ConnectionManager(GetInstruments):
 
         instrument_instance = instrument.instrument
         instrument_instance.IPAddress = ip_address
-        instrument_instance.Port = port_number
+        instrument_instance.Port = int(port_number)
         instrument_instance.TimeOut = 5000
         instrument_instance.Terminator = terminator.value
 
