@@ -12,6 +12,24 @@ from .base_instrument import BaseInstrument
 from ..logger import get_logger
 
 
+# TSL speeds list (for TSL-570 & TSL-770)
+tsl_speed_table = [
+    1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0
+]
+
+# TSL speed against minimum resolution dictionary (for TSL-570 & TSL-770)
+tsl_speed_to_minimum_resolution = {
+    1.0: 0.0002,
+    2.0: 0.0002,
+    5.0: 0.0005,
+    10.0: 0.001,
+    20.0: 0.001,
+    50.0: 0.0025,
+    100.0: 0.005,
+    200.0: 0.1,
+}
+
+
 class TslData:
     """
     A class to represent the data for a TSL.
@@ -254,6 +272,70 @@ class TslInstrument(TslData, BaseInstrument):
             self.logger.error(f"Error while setting TSL wavelength",
                          str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+
+    def validate_scan_parameters(self, start_wavelength, stop_wavelength, step_wavelength, power, speed):
+        self._instrument.Set_Wavelength_Unit(TSL.Wavelength_Unit.nm)
+        self._instrument.Set_Power_Unit(TSL.Power_Unit.dBm)
+
+        valid = True
+        errors = []
+
+        minimum_wavelength = self.information.MinimunWavelength
+        maximum_wavelength = self.information.MaximumWavelength
+
+        if not minimum_wavelength <= start_wavelength <= maximum_wavelength:
+            valid = False
+            errors.append(f"Start wavelength {start_wavelength} is out of range "
+                          f"({minimum_wavelength} nm ~ {maximum_wavelength} nm)")
+
+        if not minimum_wavelength <= stop_wavelength <= maximum_wavelength:
+            valid = False
+            errors.append(f"Stop wavelength {stop_wavelength} is out of range "
+                          f"({minimum_wavelength} nm ~ {maximum_wavelength} nm)")
+
+        if not valid:
+            error_message = "\n".join(errors) if errors else None
+            return valid, error_message
+
+        # Convert step wavelength from pm to nm
+        step_wavelength = step_wavelength / 1000
+        wavelength_span = abs(maximum_wavelength - minimum_wavelength)
+        wavelength_span = round(wavelength_span, 4)
+
+        if "570" in self.product_name or "770" in self.product_name:
+            if not speed in tsl_speed_table:
+                valid = False
+                errors.append(f"Speed {speed} is out of range ({tsl_speed_table} in nm/sec)")
+
+            minimum_step = tsl_speed_to_minimum_resolution[speed]
+            if not minimum_step <= step_wavelength < wavelength_span:
+                valid = False
+                errors.append(f"Step wavelength {step_wavelength} is out range "
+                              f"({minimum_step} nm ~ {wavelength_span} nm)")
+
+        minimum_speed = self.information.MinimumSpeed
+        maximum_speed = self.information.MaximumSpeed
+
+        if not minimum_speed <= speed <= maximum_speed:
+            valid = False
+            errors.append(f"Speed {speed} is out of range "
+                          f"({minimum_speed} nm/sec ~ {maximum_speed} nm/sec)")
+
+        if not 0.0001 < step_wavelength < wavelength_span:
+            valid = False
+            errors.append(f"Step wavelength {step_wavelength} is out range "
+                          f"(0.0001 nm ~ {wavelength_span} nm)")
+
+        minimum_power = self.information.MinimumAPCPower_dBm
+        maximum_power = self.information.MaximumAPCPower_dBm
+
+        if not minimum_power <= power <= maximum_power:
+            valid = False
+            errors.append(f"Power {power} is out of range "
+                          f"({minimum_power} dBm ~ {maximum_power} dBm)")
+
+        error_message = "\n".join(errors) if errors else None
+        return valid, error_message
 
     def set_scan_parameters(self,
                              start_wavelength: float,
