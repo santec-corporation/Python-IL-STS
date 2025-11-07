@@ -563,14 +563,28 @@ class StsProcess(STSData):
 
     # endregion
 
-    def set_parameters(self, start_wavelength, stop_wavelength, scan_step,
-                       power, scan_speed, selected_channels, selected_ranges):
-        self.scan_speed = scan_speed
+    def set_scan_parameters(self, start_wavelength, stop_wavelength, scan_step, power, scan_speed,
+                            selected_channels, selected_ranges, mpm_220_ref_module_info = None):
+
+        is_valid, errors = self._tsl.validate_scan_parameters(start_wavelength, stop_wavelength,
+                                                                 scan_step, power, scan_speed)
+        if not is_valid:
+            raise Exception(errors)
+
+        is_valid, errors = self._mpm.validate_selected_channels_ranges(selected_channels,
+                                                                       selected_ranges,
+                                                                       mpm_220_ref_module_info)
+        if not is_valid:
+            raise Exception(errors)
+
+        scan_step = scan_step / 1000
 
         self._set_tsl_parameters(start_wavelength, stop_wavelength, scan_step,
                                  power, scan_speed)
         self._set_mpm_parameters(start_wavelength, stop_wavelength, scan_step, scan_speed)
         self._set_daq_parameters(start_wavelength, stop_wavelength, scan_speed)
+
+        self.mpm_220_high_spec_module_info = mpm_220_ref_module_info
 
         # Calculate the mpm wait time
         self.mpm_wait_time = int((stop_wavelength - start_wavelength) / scan_speed * 1100)

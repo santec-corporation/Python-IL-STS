@@ -65,7 +65,7 @@ def select_mpm_channels(mpm, use_mpm_220_ref: bool, mpm_220_ref_module_info) -> 
 
     # Set MPM-220 channel for monitor data measurement.
     if use_mpm_220_ref:
-        print("\nPlease select reference channel for the MPM-220 instrument.")
+        print("\nPlease select a reference channel for the MPM-220 instrument.")
         selection = input("Input (module number, channel number) pair. Ex: (1,1): ")
         tokens = re.findall(r"\d+", selection)
 
@@ -106,13 +106,14 @@ def select_mpm_channels(mpm, use_mpm_220_ref: bool, mpm_220_ref_module_info) -> 
 
 def select_dynamic_ranges(mpm) -> List[int]:
     """Select optical dynamic ranges for the MPM."""
+    available_modules = mpm.get_available_modules()
     print("\nAvailable dynamic ranges:")
-    for i, rng in enumerate(mpm.dynamic_ranges, start=1):
-        print(f"{i}. {rng}")
+    for module in available_modules:
+        print(f"Module {module.module_number + 1}: {module.module_type} - Dynamic Ranges: {module.ranges}")
 
     selection = input("Select dynamic range(s) (e.g., 1,2,3): ")
-    selected = re.findall(r"\d+", selection)
-    return [int(i) for i in selected]
+    selected_ranges = re.findall(r"\d+", selection)
+    return [int(i) for i in selected_ranges]
 
 
 def save_scan_data(ilsts: StsProcess) -> None:
@@ -241,19 +242,19 @@ def wavelength_dependent_loss(
 
     selected_channels = []
     selected_ranges = []
+    mpm_220_ref_module_info = [-1, -1]
+
     if not reference_data:
         # --- MPM configuration ---
-        mpm_220_ref_module_info = [-1, -1]
         selected_channels = select_mpm_channels(mpm, ilsts.use_ref_mpm_220, mpm_220_ref_module_info)
-        ilsts.mpm_220_high_spec_module_info = (mpm_220_ref_module_info[0], mpm_220_ref_module_info[1])
         selected_ranges = select_dynamic_ranges(mpm)
     else:
         print("\nReference data loaded.")
         ilsts.load_reference_scan_data(reference_data)
 
     # --- Set STS Process parameters ---
-    ilsts.set_parameters(start_wl, stop_wl, step, power, speed,
-                         selected_channels, selected_ranges)
+    ilsts.set_scan_parameters(start_wl, stop_wl, step, power, speed,
+                              selected_channels, selected_ranges, mpm_220_ref_module_info)
 
     # --- MPM 215 Special Handling ---
     if mpm.mpm_215_selection_check(selected_channels):
