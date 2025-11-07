@@ -221,7 +221,7 @@ def wavelength_dependent_loss(
 
     # --- Load scan parameters ---
     scan_parameters = {}
-    parameters_loaded = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
+    _ = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
 
     start_wl = scan_parameters["start_wavelength"]
     stop_wl = scan_parameters["stop_wavelength"]
@@ -234,38 +234,25 @@ def wavelength_dependent_loss(
     # --- Initialize STS Process ---
     ilsts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
 
-    # --- Reference Scan Handling ---
-    reference_data = (
-        data_utils.import_reference_scan_data()
-        if parameters_loaded else None
-    )
-
-    selected_channels = []
-    selected_ranges = []
     mpm_220_ref_module_info = [-1, -1]
 
-    if not reference_data:
-        # --- MPM configuration ---
-        selected_channels = select_mpm_channels(mpm, ilsts.use_ref_mpm_220, mpm_220_ref_module_info)
-        selected_ranges = select_dynamic_ranges(mpm)
-    else:
-        print("\nReference data loaded.")
-        ilsts.load_reference_scan_data(reference_data)
+    # --- MPM configuration ---
+    selected_channels = select_mpm_channels(mpm, ilsts.use_ref_mpm_220, mpm_220_ref_module_info)
+    selected_ranges = select_dynamic_ranges(mpm)
+
+    # --- MPM 215 Special Handling ---
+    if mpm.mpm_215_selection_check(selected_channels):
+        tsl_power_check(tsl)
+        selected_ranges = [2]
 
     # --- Set STS Process parameters ---
     ilsts.set_scan_parameters(start_wl, stop_wl, step, power, speed,
                               selected_channels, selected_ranges, mpm_220_ref_module_info)
 
-    # --- MPM 215 Special Handling ---
-    if mpm.mpm_215_selection_check(selected_channels):
-        tsl_power_check(tsl)
-        ilsts.selected_ranges = [2]
-
     # --- Reference Scan ---
-    if not reference_data:
-        print("\nReference process...")
-        input("\nPress ENTER to start the reference process ")
-        ilsts.reference_scan()
+    print("\nReference process...")
+    input("\nPress ENTER to start the reference process ")
+    ilsts.reference_scan()
 
     # --- DUT Measurement Scans ---
     print("\nMeasurement process...")
