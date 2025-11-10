@@ -32,6 +32,12 @@ except Exception as e:
     raise
 
 
+import sys
+if "pydevd" in sys.modules or sys.gettrace():
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+
+
 # Import santec modules
 from .connections.get_instruments import GetInstruments
 from .connections.connection_manager import ConnectionManager
