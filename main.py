@@ -207,21 +207,9 @@ def wavelength_dependent_loss(
     # --- Identify TSL type ---
     is_tsl_570 = not tsl.get_tsl_type_flag()
 
-    # --- Identify MPM type and select the operation mode ---
-    if "220" in mpm.product_name:
-        print("\nMPM-220 instrument detected. Please select the operation mode.")
-        choice = input("Select measurement type [1: Standard / 2: High-spec]: ").strip()
-
-        if choice not in ('1', '2'):
-            raise ValueError("⚠ Invalid selection. Please enter 1 or 2.")
-
-        use_high_spec_mode = (choice == '2')
-    else:
-        use_high_spec_mode = False
-
     # --- Load scan parameters ---
     scan_parameters = {}
-    parameters_loaded  = data_utils.get_scan_parameters(scan_parameters, is_tsl_570)
+    parameters_loaded  = data_utils.get_scan_parameters(scan_parameters, is_tsl_570, "220" in mpm.product_name)
 
     start_wl = scan_parameters["start_wavelength"]
     stop_wl = scan_parameters["stop_wavelength"]
@@ -230,6 +218,7 @@ def wavelength_dependent_loss(
     speed = scan_parameters["scan_speed"]
     cycles = scan_parameters["scan_cycles"]
     delay = scan_parameters["scan_delay"]
+    use_high_spec_mode = scan_parameters["use_high_spec_mode"]
 
     # --- Reference Data Import Handling ---
     reference_data = (

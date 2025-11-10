@@ -47,6 +47,7 @@ def import_scan_parameters(scan_parameters: dict):
             print("Scan Speed (nm/s):", scan_parameters["scan_speed"])
             print("Scan Cycles:", scan_parameters["scan_cycles"])
             # print("Scan Delay:", scan_parameters["scan_delay"])
+            print("Use High-Spec Mode:", scan_parameters["use_high_spec_mode"])
             return True
         else:
             return False
@@ -105,7 +106,7 @@ def get_tsl_scan_speed(step_wavelength) -> int:
     return speed_table[user_select_scan_speed]
 
 
-def get_scan_parameters(scan_parameters: dict, is_tsl_570 = True):
+def get_scan_parameters(scan_parameters: dict, is_tsl_570 = True, is_mpm_220 = False):
     load_scan_parameters = import_scan_parameters(scan_parameters)
     if not load_scan_parameters:
         scan_parameters["start_wavelength"] = float(input("\nInput Start Wavelength (nm): "))
@@ -118,6 +119,18 @@ def get_scan_parameters(scan_parameters: dict, is_tsl_570 = True):
             scan_parameters["scan_speed"] = get_tsl_scan_speed(scan_parameters["scan_step"])
         else:
             scan_parameters["scan_speed"] = int(input("Input Scan Speed (nm/s): "))
+
+        # --- Identify MPM type and select the operation mode ---
+        if is_mpm_220:
+            print("\nMPM-220 instrument detected. Please select the operation mode.")
+            choice = input("Select measurement type [1: Standard / 2: High-spec]: ").strip()
+
+            if choice not in ('1', '2'):
+                raise ValueError("⚠ Invalid selection. Please enter 1 or 2.")
+
+            scan_parameters["use_high_spec_mode"] = (choice == '2')
+        else:
+            scan_parameters["use_high_spec_mode"] = False
     return load_scan_parameters
 
 
@@ -129,7 +142,8 @@ def export_scan_parameters(scan_parameters: dict):
         "power": scan_parameters["power"],
         "scan_speed": scan_parameters["scan_speed"],
         "scan_cycles": scan_parameters["scan_cycles"],
-        "scan_delay": scan_parameters["scan_delay"]
+        "scan_delay": scan_parameters["scan_delay"],
+        "use_high_spec_mode": scan_parameters["use_high_spec_mode"]
     }
 
     with open(SCAN_PARAMETERS_CONFIG, 'w', encoding='utf8') as export_file:
