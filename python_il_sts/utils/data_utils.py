@@ -88,10 +88,10 @@ def get_tsl_scan_speed(step_wavelength) -> int:
 
     :return: int | TSL scan speed
     """
-    speed_table = {}
+    speed_table = {"1": 1, "2": 2}
 
-    thresholds = [(0.2, "1", 1), (0.2, "2", 2), (0.5, "3", 5), (1, "4", 10),
-                  (1, "5", 20), (2.5, "6", 50), (5, "7", 100), (100, "8", 200)]
+    thresholds = [(0.5, "3", 5), (1, "4", 10), (1, "5", 20),
+                  (2.5, "6", 50), (5, "7", 100), (100, "8", 200)]
 
     for limit, key, value in thresholds:
         if step_wavelength >= limit:
