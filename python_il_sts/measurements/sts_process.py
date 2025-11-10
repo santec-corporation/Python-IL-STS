@@ -218,7 +218,6 @@ class StsProcess(STSData):
         try:
             # Wait until the TSL is set to "Waiting for trigger" status
             self._tsl.wait_for_scan_status(waiting_time=3000, scan_status=4)
-            self._tsl.wait_for_scan_status(waiting_time=3000, scan_status=4)
 
             # Start DAQ sampling
             if self._daq:
@@ -627,6 +626,8 @@ class StsProcess(STSData):
 
             # TSL scan stop
             self._tsl.stop_scan()
+
+            time.sleep(0.5)
         self.logger.info("Reference completed.")
 
     def measurement_scan(self):
