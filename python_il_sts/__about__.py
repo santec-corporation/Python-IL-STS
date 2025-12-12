@@ -10,7 +10,7 @@ import datetime
 __project_name__ = "Python-IL-STS"
 
 # Project version
-__version__ = "2.9.0"
+__version__ = "2.10.0-rc1"
 
 # Project metadata
 __author__ = "Santec Holdings Corporation"
