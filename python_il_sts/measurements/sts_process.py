@@ -221,14 +221,14 @@ class StsProcess(STSData):
 
             # Start DAQ sampling
             if self._daq:
-                self._daq.sampling_start()
+                self._daq.start_sampling()
 
             # Issue the TSL soft trigger
             self._tsl.soft_trigger()
 
             # DAQ wait for for scan completion
             if self._daq:
-                self._daq.sampling_wait()
+                self._daq.wait_for_sampling()
 
             # Wait until the TSL is set to "Standby" status
             self._tsl.wait_for_scan_status(waiting_time=self.mpm_wait_time, scan_status=1)
@@ -306,7 +306,7 @@ class StsProcess(STSData):
         trigger = []
         monitor = []
         if self._daq:
-            trigger, monitor = self._daq.get_sampling_raw_data()
+            trigger, monitor = self._daq.get_raw_data()
         elif self.use_ref_mpm_220:
             trigger, monitor = self._get_mpm_220_data()
         elif self.use_power_monitor_logg:
@@ -420,7 +420,7 @@ class StsProcess(STSData):
         trigger = []
         monitor = []
         if self._daq:
-            trigger, monitor = self._daq.get_sampling_raw_data()
+            trigger, monitor = self._daq.get_raw_data()
         elif self.use_ref_mpm_220:
             trigger, monitor = self._get_mpm_220_data()
         elif self.use_power_monitor_logg:
