@@ -2,22 +2,23 @@
 TSL Instrument Class.
 """
 
+# Import the TSL class and exception codes from the DLL.
 from ..drivers.santec_wrapper import TSL, ExceptionCode
 
-# Importing instrument error strings
+# Import the instrument error strings
 from ..utils.error_handling import InstrumentError, instrument_error_strings
 from .base_instrument import BaseInstrument
 
-# Import program logger
+# Import the program logger
 from ..logger import get_logger
 
 
-# TSL speeds list (for TSL-570 & TSL-770)
+# Speed table (for TSL-570 & TSL-770).
 tsl_speed_table = [
     1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0
 ]
 
-# TSL speed against minimum resolution dictionary (for TSL-570 & TSL-770)
+# Speed against minimum resolution (for TSL-570 & TSL-770).
 tsl_speed_to_minimum_resolution = {
     1.0: 0.0002,
     2.0: 0.0002,
@@ -35,10 +36,10 @@ class TslData:
     A class to represent the data for a TSL.
 
     Attributes:
-        max_power (float): The maximum power output of the TSL.
-        spec_max_wav (float): The maximum wavelength of the spectral dynamic_range of the TSL.
-        spec_min_wav (float): The minimum wavelength of the spectral dynamic_range of the TSL.
-        scan_speed_table (list): A table of TSL scan speeds.
+        max_power (float): The maximum power (in dBm) output of the TSL.
+        spec_max_wav (float): The maximum wavelength (in nm) of the spectral dynamic_range of the TSL.
+        spec_min_wav (float): The minimum wavelength (in nm) of the spectral dynamic_range of the TSL.
+        scan_speed_table (list): The list of TSL scan speeds (in nm/sec).
     """
     max_power: float = 0.0
     spec_max_wav: float = 0.0
@@ -69,23 +70,25 @@ class TslInstrument(TslData, BaseInstrument):
             InstrumentError: If checking laser diode status fails.
             RuntimeError: If laser diode is not switched ON.
         """
-        self.logger.info("Checking laser diode status")
+        self.logger.info("Checking the laser diode status")
         ld_status = TSL.LD_Status
         status = ld_status.LD_OFF
         error_code, status = self._instrument.Get_LD_Status(status)
+
         if error_code != 0:
-            self.logger.warning("Error while checking TSL ld status",
+            self.logger.warning("Error while checking the laser diode status",
                            str(error_code) + ": " + instrument_error_strings(error_code))
             raise InstrumentError(str(error_code) + ": " + instrument_error_strings(error_code))
+
         while status != ld_status.LD_ON:
-            self.logger.critical("TSL Laser Diode not switched ON.")
-            print("\nTSL laser diode not switched ON.")
-            print("Please switch ON the laser diode.")
+            self.logger.info("Laser Diode is OFF.")
+            print("\nThe TSL laser diode is OFF.")
+            print("Please turn ON the laser diode.")
             input("Once the laser diode is switched ON, press Enter...")
 
             error_code, status = self._instrument.Get_LD_Status(status)     # Get the laser diode status
 
-        self.logger.info("Laser diode ON.")
+        self.logger.info("Laser diode is ON.")
         return error_code
 
     def set_laser_diode_status(self, state: str = 'on') -> int:

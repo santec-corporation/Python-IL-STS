@@ -2,16 +2,16 @@
 DAQ Instrument.
 """
 
-# Import DAQ class from the Santec DLL
+# Import the DAQ class from the DLL
 from ..drivers.santec_wrapper import DAQ
 
-# Importing instrument error strings
+# Import the instrument error strings
 from ..utils import InstrumentError, instrument_error_strings
 
-# Import base instrument class.
+# Import the base instrument class.
 from .base_instrument import BaseInstrument
 
-# Import program logger
+# Import the program logger
 from ..logger import get_logger
 
 
@@ -33,10 +33,10 @@ class DaqInstrument(BaseInstrument):
         Set DAQ logging parameters for DAQ sampling.
 
         Parameters:
-            start_wavelength (float): Start wavelength value of the scan.
-            stop_wavelength (float): Stop wavelength value of the scan.
-            scan_speed (float): The scan speed value of the scan.
-            tsl_actual_step (float): Step wavelength value of the scan.
+            start_wavelength (float): Start wavelength (in nm) value of the scan.
+            stop_wavelength (float): Stop wavelength (in nm) value of the scan.
+            scan_speed (float): The scan speed (in nm/sec) value of the scan.
+            tsl_actual_step (float): Step wavelength (in nm) value of the scan.
 
         Raises:
             InstrumentError: If setting the logging parameters to the DAQ device fails.
