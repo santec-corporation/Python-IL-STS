@@ -43,7 +43,7 @@ def set_odd_channels(modules: List[Any]) -> List[List[int]]:
 
 def set_special_channels(modules: List[Any]) -> List[List[int]]:
     """Manually select specific module/channel pairs."""
-    selection = input("Input (module number, channel number) pairs. Example: (1,1); (2,1);")
+    selection = input("Input (module number, channel number) pairs. Example: (1,1); (2,1); ")
     tokens = re.findall(r"\d+", selection)
     if len(tokens) % 2 != 0:
         print("⚠ Invalid input — must have module/channel pairs.")
@@ -66,7 +66,7 @@ def select_mpm_channels(mpm, use_mpm_220_ref: bool, mpm_220_ref_module_info) -> 
     # Set MPM-220 channel for monitor data measurement.
     if use_mpm_220_ref:
         print("\nPlease select a REFERENCE CHANNEL:")
-        selection = input("Input (module number, channel number) pair. Example: (1,1)")
+        selection = input("Input (module number, channel number) pair. Example: (1,1) ")
         tokens = re.findall(r"\d+", selection)
 
         if len(tokens) != 2:
@@ -111,7 +111,7 @@ def select_dynamic_ranges(mpm) -> List[int]:
     for module in available_modules:
         print(f"Module {module.module_number + 1}: {module.module_type} - Dynamic Ranges: {module.ranges}")
 
-    selection = input("Select dynamic range(s) (Example: 1,2,3)")
+    selection = input("Select dynamic range(s) (Example: 1,2,3) ")
     selected_ranges = re.findall(r"\d+", selection)
     return [int(i) for i in selected_ranges]
 
