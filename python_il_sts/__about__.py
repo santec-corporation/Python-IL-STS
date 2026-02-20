@@ -17,7 +17,7 @@ __author__ = "Santec Holdings Corporation"
 __license__ = "GNU General Public License v3.0"
 __organization__ = "Santec Holdings Corporation"
 __description__ = (
-    "Python Package for Santec Insertion Loss"
+    "Python Software for Santec Insertion Loss"
 )
 __url__ = f"https://github.com/santec-corporation/{__project_name__}"
 
