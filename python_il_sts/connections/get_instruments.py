@@ -113,6 +113,8 @@ class GetInstruments:
             idn = value.strip("'").split('_')
             name = f"{idn[0]}_{idn[1]}_USB"
             instr = Instrument(idn=idn, name=name, resource=usb_id)
+            if 'TSL' not in idn:
+                continue
             instruments.append(instr)
 
     def list_daq_devices(self, instruments: list) -> str | None:
