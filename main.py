@@ -244,20 +244,20 @@ def wavelength_dependent_loss(
         selected_dynamic_ranges = [2]
 
     # --- Initialize STS Process ---
-    ilsts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
+    il_sts = StsProcess(tsl, mpm, daq, use_high_spec_mode)
 
     # --- Set STS Process parameters ---
-    ilsts.set_scan_parameters(start_wl, stop_wl, step, power, speed, selected_channels,
+    il_sts.set_scan_parameters(start_wl, stop_wl, step, power, speed, selected_channels,
                               selected_dynamic_ranges, mpm_220_ref_module_info)
 
     # --- Reference Scan Process ---
     if reference_data:
-        ilsts.load_reference_scan_data(reference_data)
+        il_sts.load_reference_scan_data(reference_data)
         print("\nLoaded reference scan data.")
     else:
         print("\nReference process...")
         input("\nPress ENTER to start the reference process ")
-        ilsts.reference_scan()
+        il_sts.reference_scan()
 
     # --- Measurement Scan Process ---
     print("\nMeasurement process...")
@@ -268,12 +268,12 @@ def wavelength_dependent_loss(
 
         for i in range(cycles):
             print(f"\n🟢 Measurement Scan {i + 1} of {cycles}...")
-            ilsts.measurement_scan()
+            il_sts.measurement_scan()
 
             # Optionally show graph
             if input("\nView the graph? (y/n): ").lower() == "y":
                 plot_utils.plot_wavelength_dependent_loss(
-                    ilsts.wavelength_table, ilsts.il
+                    il_sts.wavelength_table, il_sts.il
                 )
 
             time.sleep(delay)
@@ -281,11 +281,11 @@ def wavelength_dependent_loss(
             if cycles > 1 and i < cycles - 1:
                 input(f"\nPress ENTER to continue to Scan {i + 2}...")
 
-        ilsts.get_dut_data()
+        il_sts.get_dut_data()
         redo_scan = input("\nRedo Scan? (y/n): ")
 
     data_utils.export_scan_parameters(scan_parameters)
-    save_scan_data(ilsts)
+    save_scan_data(il_sts)
 
     print("\nWavelength-dependent loss measurement completed.")
 
