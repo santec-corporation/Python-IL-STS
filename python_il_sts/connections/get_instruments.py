@@ -13,6 +13,7 @@ import nidaqmx
 
 # Python IL STS imports.
 from ..drivers.santec_wrapper import MainCommunication
+from ..drivers import dll_manager
 
 # Import program logger.
 from ..logger import get_logger
@@ -103,6 +104,10 @@ class GetInstruments:
         Parameters:
             instruments (list): The list where detected USB resources will be stored.
         """
+        if not dll_manager.check_dll_exist(dll_manager.FTD2XX_DLL_PATH, ["ftd2xx.dll"]):
+            self.logger.info("FTDI drivers not installed. USB devices are unavailable.")
+            return None
+
         self.logger.info("Getting USB resources")
         main_communication = MainCommunication()
         usb_resources = list(main_communication.Get_USB_Resouce())
@@ -116,6 +121,7 @@ class GetInstruments:
             if 'TSL' not in idn:
                 continue
             instruments.append(instr)
+        return None
 
     def list_daq_devices(self, instruments: list) -> str | None:
         """

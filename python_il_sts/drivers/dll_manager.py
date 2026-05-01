@@ -1,5 +1,5 @@
 """
-Python IL STS - DLL Manager.
+Python-IL-STS DLL Manager.
 
 - Load the Santec DLLs from the default STS application path.
 - Load the Santec DLLs from the user AppData path.
@@ -33,7 +33,7 @@ if platform.system() != "Windows":
 # Default path where the DLLs are expected to be found
 SYSTEM_DLL_PATH = r"C:\\Program Files\\santec\\Swept Test System IL And PDL"
 APPDATA_DLL_PATH = Path(os.getenv("APPDATA")) / "santec" / "python_il_sts" / "dlls"
-
+FTD2XX_DLL_PATH = r"C:\Windows\System32"
 
 # DLL Names
 # List of DLLs to be loaded
@@ -41,20 +41,21 @@ DLL_NAMES = ["InstrumentDLL.dll", "STSProcess.dll"]
 
 
 # Check if DLLs exist
-def dlls_exist(folder_path):
+def check_dll_exist(folder_path, dlls: list = None):
     """Checks if the DLLs are present in the provided folder path."""
-    return all((Path(folder_path) / dll).exists() for dll in DLL_NAMES)
+    dlls = DLL_NAMES if dlls is None else dlls
+    return all((Path(folder_path) / dll).exists() for dll in dlls)
 
 
 def load_dlls():
     """Gets the path where the DLLs exist."""
-    if dlls_exist(SYSTEM_DLL_PATH):
+    if check_dll_exist(SYSTEM_DLL_PATH):
         dll_path = SYSTEM_DLL_PATH
-        logger.info(f"Found DLLs in: {dll_path}")
+        logger.debug(f"Found DLLs in: {dll_path}")
 
-    elif dlls_exist(APPDATA_DLL_PATH):
+    elif check_dll_exist(APPDATA_DLL_PATH):
         dll_path = APPDATA_DLL_PATH
-        logger.info(f"Found DLLs in AppData: {dll_path}")
+        logger.debug(f"Found DLLs in AppData: {dll_path}")
     else:
         raise RuntimeError("DLLs not found.")
 
@@ -74,14 +75,14 @@ def setup_dlls(dll_path, dlls=None):
     for dll in dlls:
         try:
             full_path = os.path.join(dll_path, dll)
-            logger.info(f"Loading DLL: {full_path}")
+            logger.debug(f"Loading DLL: {full_path}")
 
             # Attempt to load the DLL
             clr.AddReference(full_path)
 
-            logger.info(f"DLL Loaded: {dll}")
+            logger.debug(f"DLL Loaded: {dll}")
 
         except Exception as e:
-            logger.info(f"Error loading DLL '{dll}': {e}")
+            logger.debug(f"Error loading DLL '{dll}': {e}")
             return False  # Stop on first failure
     return True  # Only returns True if all DLLs are loaded successfully
