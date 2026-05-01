@@ -30,13 +30,14 @@ daq = DAQ()
 class ConnectionManager(GetInstruments):
     """Main connection manager for instrument detection and connection."""
 
-    def __init__(self):
+    def __init__(self, use_keysight_visa: bool = False):
         """Initializes the Connection Manager class."""
         super().__init__()
         self.logger = get_logger(self.__class__.__name__)
         self._instruments: Dict[str, str] = {}
         self._connected_instruments: Dict[str, BaseInstrument] = {}
         self._resources_listed: bool = False
+        self._use_keysight_visa = use_keysight_visa
         self.logger.info("Initializing Instrument Manager...")
 
     def list_instruments(self):
@@ -149,8 +150,11 @@ class ConnectionManager(GetInstruments):
         instrument_instance = instrument.instrument
         instrument_instance.GPIBBoard = int(gpib_board)
         instrument_instance.GPIBAddress = int(gpib_address)
-        instrument_instance.GPIBConnectType = GPIBType.NI4882.value
         instrument_instance.Terminator = terminator.value
+        if self._use_keysight_visa:
+            instrument_instance.GPIBConnectType = GPIBType.KeysightVisa.value
+        else:
+            instrument_instance.GPIBConnectType = GPIBType.NI4882.value
 
         try:
             error_code = instrument_instance.Connect(ConnectionType.GPIB.value)
