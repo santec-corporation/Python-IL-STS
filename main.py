@@ -15,6 +15,10 @@ from python_il_sts import (ConnectionManager, TslInstrument, MpmInstrument, DaqI
 DWELL_TIME_FACTOR = 10.0  # dwell time = factor × averaging time
 MS_TO_SEC = 1000.0
 
+# VISA type boolean.
+# If USE_KEYSIGHT_VISA is set to False, NI VISA is use.
+USE_KEYSIGHT_VISA = False
+
 
 def _filter_channels(modules: List[Any], predicate) -> List[List[int]]:
     """Helper: return module/channel pairs satisfying predicate."""
@@ -141,7 +145,7 @@ def connection() -> Tuple["TslInstrument", "MpmInstrument", Optional["DaqInstrum
     Raises:
         RuntimeError: If required instruments (TSL or MPM) are not found.
     """
-    connection_manager = ConnectionManager()
+    connection_manager = ConnectionManager(USE_KEYSIGHT_VISA)
     instruments = connection_manager.list_instruments()
 
     print("Detected Instruments:", instruments)
