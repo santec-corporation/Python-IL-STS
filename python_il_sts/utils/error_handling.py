@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
-
 """
 Error Handling Class.
-
-@organization: Santec Holdings Corp.
 """
 
 
@@ -17,12 +13,12 @@ class STSProcessError(Exception):
     pass
 
 
-def instrument_error_strings(errorcode):
+def instrument_error_strings(error_code):
     """
     Instrument error strings.
 
     Parameters:
-        errorcode (int): Passed by DLL.
+        error_code (int): Passed by DLL.
 
     Returns
         str: InstrumentDLL Error string.
@@ -48,19 +44,19 @@ def instrument_error_strings(errorcode):
         10: "Stopped"
     }
 
-    errorcode = int(errorcode)
-    if errorcode in instrument_error:
-        return str(instrument_error[errorcode])
+    error_code = int(error_code)
+    if error_code in instrument_error:
+        return str(instrument_error[error_code])
 
-    raise InstrumentError(f"Unrecognized error code: {errorcode}")
+    raise InstrumentError(f"Unrecognized error code: {error_code}")
 
 
-def sts_process_error_strings(errorcode):
+def sts_process_error_strings(error_code):
     """
     STS Process error strings.
 
     Parameters:
-        errorcode (int): Passed by DLL.
+        error_code (int): Passed by DLL.
 
     Returns:
         str: STSProcess DLL Error string.
@@ -82,8 +78,8 @@ def sts_process_error_strings(errorcode):
         0: "Success"
     }
 
-    errorcode = int(errorcode)
-    if errorcode in process_error:
-        return str(process_error[errorcode])
+    error_code = int(error_code)
+    if error_code in process_error:
+        return str(process_error[error_code])
 
-    raise STSProcessError(f"Unrecognized error code: {errorcode}")
+    raise STSProcessError(f"Unrecognized error code: {error_code}")

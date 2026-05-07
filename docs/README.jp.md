@@ -10,13 +10,13 @@
 
 
 ## コアスクリプトの概要
-- [get_address.py](/./src/santec/get_address.py): GPIBおよびUSBを介して接続された機器を検出します。
-- [tsl_instrument_class.py](/./src/santec/tsl_instrument_class.py): TSL機器機能を管理します。
-- [mpm_instrument_class.py](/./src/santec/mpm_instrument_class.py): MPM機器操作を処理します。
-- [daq_device_class.py](/./src/santec/daq_device_class.py):DAQデバイスと対話します。
-- [sts_process.py](/./src/santec/sts_process.py): 掃引されたテストシステムからのデータを処理します。
-- [error_handling_class.py](/./src/santec/error_handling_class.py): 機器DLLおよびSTSプロセスDLLに関連するエラーを管理します。
-- [file_saving.py](/./src/santec/file_saving.py): スイープテストシステムの運用データを記録します。
+- [get_address.py](/python_il_sts/santec/get_address.py): GPIBおよびUSBを介して接続された機器を検出します。
+- [tsl_instrument_class.py](/python_il_sts/santec/tsl_instrument_class.py): TSL機器機能を管理します。
+- [mpm_instrument_class.py](/python_il_sts/santec/mpm_instrument_class.py): MPM機器操作を処理します。
+- [daq_device_class.py](/python_il_sts/santec/daq_device_class.py):DAQデバイスと対話します。
+- [sts_process.py](/python_il_sts/santec/sts_process.py): 掃引されたテストシステムからのデータを処理します。
+- [error_handling_class.py](/python_il_sts/santec/error_handling_class.py): 機器DLLおよびSTSプロセスDLLに関連するエラーを管理します。
+- [file_saving.py](/python_il_sts/santec/file_saving.py): スイープテストシステムの運用データを記録します。
 
 ---
 
